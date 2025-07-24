@@ -803,17 +803,6 @@ Instructions:
         // Initialize the app
         initApp();
 
-        // Demo mode
-        if (!window.location.search) {
-            const demoParams = new URLSearchParams();
-            demoParams.set('type', 'bottle');
-            demoParams.set('quality', '92');
-            demoParams.set('confidence', '88');
-            demoParams.set('frames', '47');
-            demoParams.set('enhanced', 'true');
-            window.history.replaceState({}, '', '?' + demoParams.toString());
-            parseURLData();
-        }
     </script>
 </body>
 </html>
