@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ARize - Web AR Viewer</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            font-family: 'Arial', sans-serif; 
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        .header {
+            background: rgba(0,0,0,0.2);
+            padding: 1rem;
+            text-align: center;
+        }
+        .container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 2rem;
+            gap: 2rem;
+        }
+        .ar-viewer {
+            background: rgba(255,255,255,0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 2rem;
+            text-align: center;
+            max-width: 500px;
+            width: 100%;
+            border: 1px solid rgba(255,255,255,0.2);
+        }
+        .object-3d {
+            width: 200px;
+            height: 200px;
+            margin: 2rem auto;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 4rem;
+            position: relative;
+            overflow: hidden;
+            animation: float 3s ease-in-out infinite, rotate 8s linear infinite;
+        }
+        .bottle { background: linear-gradient(45deg, #2196F3, #21CBF3); }
+        .box { background: linear-gradient(45deg, #F44336, #FF6B6B); }
+        .ball { background: linear-gradient(45deg, #4CAF50, #8BC34A); }
+        .cube { background: linear-gradient(45deg, #9C27B0, #E91E63); }
+        
+        .enhanced {
+            border: 3px solid #FFD700;
+            box-shadow: 0 0 30px rgba(255, 215, 0, 0.5);
+        }
+        .enhanced::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: linear-gradient(45deg, transparent, rgba(255,255,255,0.1), transparent);
+            animation: shine 2s infinite;
+        }
+        
+        @keyframes float {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-10px); }
+        }
+        @keyframes rotate {
+            from { transform: rotateY(0deg); }
+            to { transform: rotateY(360deg); }
+        }
+        @keyframes shine {
+            0% { transform: translateX(-100%) translateY(-100%) rotate(45deg); }
+            100% { transform: translateX(100%) translateY(100%) rotate(45deg); }
+        }
+        
+        .quality-badge {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: #4CAF50;
+            color: white;
+            padding: 5px 10px;
+            border-radius: 15px;
+            font-size: 0.8rem;
+            font-weight: bold;
+        }
+        .ai-badge {
+            position: absolute;
+            bottom: 10px;
+            left: 10px;
+            background: #2196F3;
+            color: white;
+            padding: 5px 8px;
+            border-radius: 10px;
+            font-size: 0.7rem;
+        }
+        
+        .info-panel {
+            background: rgba(255,255,255,0.1);
+            border-radius: 15px;
+            padding: 1.5rem;
+            margin-top: 1rem;
+            border: 1px solid rgba(255,255,255,0.2);
+        }
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            margin: 0.5rem 0;
+            padding: 0.5rem 0;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+        .info-row:last-child { border-bottom: none; }
+        
+        .enhanced-label {
+            background: linear-gradient(45deg, #FFD700, #FFA000);
+            color: #333;
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            font-weight: bold;
+            margin-bottom: 1rem;
+            display: inline-block;
+        }
+        
+        .particles {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+        }
+        .particle {
+            position: absolute;
+            width: 4px;
+            height: 4px;
+            background: rgba(255,255,255,0.8);
+            border-radius: 50%;
+            animation: orbit 4s linear infinite;
+        }
+        @keyframes orbit {
+            from { transform: rotate(0deg) translateX(100px) rotate(0deg); }
+            to { transform: rotate(360deg) translateX(100px) rotate(-360deg); }
+        }
+        
+        .scan-instructions {
+            background: rgba(255,255,255,0.1);
+            border-radius: 15px;
+            padding: 1rem;
+            margin-top: 2rem;
+            border-left: 4px solid #FFD700;
+        }
+        
+        .footer {
+            text-align: center;
+            padding: 1rem;
+            background: rgba(0,0,0,0.2);
+            font-size: 0.9rem;
+            opacity: 0.8;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>ARize Web AR Viewer</h1>
+    </div>
+    
+    <div class="container">
+        <div class="ar-viewer">
+            <div id="enhancedLabel" class="enhanced-label" style="display: none;">
+                ✨ Enhanced AR Object
+            </div>
+            
+            <div id="object3d" class="object-3d">
+                <div id="qualityBadge" class="quality-badge" style="display: none;"></div>
+                <div id="aiBadge" class="ai-badge" style="display: none;"></div>
+                <div class="particles" id="particles"></div>
+                <span id="objectIcon">🎯</span>
+            </div>
+            
+            <h2 id="objectTitle">AR Object</h2>
+            
+            <div class="info-panel" id="infoPanel">
+                <div class="info-row">
+                    <span><strong>Object Type:</strong></span>
+                    <span id="objectType">-</span>
+                </div>
+                <div class="info-row" id="qualityRow" style="display: none;">
+                    <span><strong>Scan Quality:</strong></span>
+                    <span id="scanQuality">-</span>
+                </div>
+                <div class="info-row" id="framesRow" style="display: none;">
+                    <span><strong>Frames Captured:</strong></span>
+                    <span id="frameCount">-</span>
+                </div>
+                <div class="info-row" id="confidenceRow" style="display: none;">
+                    <span><strong>AI Confidence:</strong></span>
+                    <span id="aiConfidence">-</span>
+                </div>
+            </div>
+        </div>
+        
+      
+
+    <script>
+        // Parse URL parameters
+        function getUrlParams() {
+            const urlParams = new URLSearchParams(window.location.search);
+            return {
+                id: urlParams.get('id') || 'demo',
+                type: urlParams.get('type') || 'cube',
+                frames: parseInt(urlParams.get('frames')) || 0,
+                duration: parseInt(urlParams.get('duration')) || 0,
+                quality: parseInt(urlParams.get('quality')) || 0,
+                confidence: parseInt(urlParams.get('confidence')) || 0,
+                enhanced: urlParams.get('enhanced') === 'true'
+            };
+        }
+
+        // Object configurations
+        const objectConfig = {
+            bottle: { icon: '🍼', name: 'Bottle', class: 'bottle' },
+            box: { icon: '📦', name: 'Box', class: 'box' },
+            ball: { icon: '⚽', name: 'Ball', class: 'ball' },
+            cube: { icon: '🎲', name: 'Cube', class: 'cube' }
+        };
+
+        // Initialize the AR viewer
+        function initARViewer() {
+            const params = getUrlParams();
+            const config = objectConfig[params.type] || objectConfig.cube;
+            
+            // Set object appearance
+            const object3d = document.getElementById('object3d');
+            const objectIcon = document.getElementById('objectIcon');
+            const objectTitle = document.getElementById('objectTitle');
+            const objectType = document.getElementById('objectType');
+            
+            object3d.className = `object-3d ${config.class}`;
+            objectIcon.textContent = config.icon;
+            objectTitle.textContent = config.name;
+            objectType.textContent = config.name;
+            
+            // Enhanced features
+            if (params.enhanced) {
+                document.getElementById('enhancedLabel').style.display = 'block';
+                object3d.classList.add('enhanced');
+                
+                // Quality badge
+                if (params.quality > 0) {
+                    const qualityBadge = document.getElementById('qualityBadge');
+                    qualityBadge.textContent = `${params.quality}%`;
+                    qualityBadge.style.display = 'block';
+                    qualityBadge.style.background = params.quality > 70 ? '#4CAF50' : '#FF9800';
+                    
+                    document.getElementById('qualityRow').style.display = 'flex';
+                    document.getElementById('scanQuality').textContent = `${params.quality}%`;
+                }
+                
+                // AI confidence
+                if (params.confidence > 0) {
+                    const aiBadge = document.getElementById('aiBadge');
+                    aiBadge.textContent = `AI ${params.confidence}%`;
+                    aiBadge.style.display = 'block';
+                    
+                    document.getElementById('confidenceRow').style.display = 'flex';
+                    document.getElementById('aiConfidence').textContent = `${params.confidence}%`;
+                }
+                
+                // Frame count
+                if (params.frames > 0) {
+                    document.getElementById('framesRow').style.display = 'flex';
+                    document.getElementById('frameCount').textContent = params.frames;
+                }
+                
+                // Create particles for enhanced objects
+                createParticles();
+            }
+        }
+
+        // Create floating particles
+        function createParticles() {
+            const particlesContainer = document.getElementById('particles');
+            for (let i = 0; i < 6; i++) {
+                const particle = document.createElement('div');
+                particle.className = 'particle';
+                particle.style.animationDelay = `${i * 0.5}s`;
+                particle.style.animationDuration = `${4 + Math.random() * 2}s`;
+                particlesContainer.appendChild(particle);
+            }
+        }
+
+        // Add gyroscope/device motion for mobile
+        if (window.DeviceMotionEvent) {
+            window.addEventListener('devicemotion', function(event) {
+                const object3d = document.getElementById('object3d');
+                const rotation = event.rotationRate;
+                if (rotation) {
+                    const currentTransform = object3d.style.transform || '';
+                    object3d.style.transform = currentTransform + ` rotateX(${rotation.beta * 2}deg) rotateY(${rotation.gamma * 2}deg)`;
+                }
+            });
+        }
+
+        // Initialize when page loads
+        document.addEventListener('DOMContentLoaded', initARViewer);
+        
+        // Demo mode if no parameters
+        if (!window.location.search) {
+            // Show demo object
+            const demoParams = new URLSearchParams();
+            demoParams.set('type', 'bottle');
+            demoParams.set('quality', '95');
+            demoParams.set('confidence', '87');
+            demoParams.set('frames', '42');
+            demoParams.set('enhanced', 'true');
+            window.history.replaceState({}, '', '?' + demoParams.toString());
+            initARViewer();
+        }
+    </script>
+</body>
+</html>
