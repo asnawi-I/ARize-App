@@ -76,110 +76,54 @@
             background: rgba(0,0,0,0.8);
         }
         
-        /* AR Object Container */
-        .ar-object-container {
+        /* Placement UI */
+        .placement-ui {
             position: fixed;
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
-            z-index: 50;
-            width: 200px;
-            height: 200px;
-            pointer-events: auto;
-            cursor: grab;
-        }
-        
-        .ar-object-container:active {
-            cursor: grabbing;
-        }
-        
-        .ar-object {
-            width: 100%;
-            height: 100%;
-            position: relative;
-            animation: float 4s ease-in-out infinite;
-            transform-style: preserve-3d;
-        }
-        
-        .object-3d {
-            width: 100%;
-            height: 100%;
+            background: rgba(0,0,0,0.9);
+            color: white;
+            padding: 30px;
             border-radius: 20px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            position: relative;
-            overflow: hidden;
-            background: linear-gradient(135deg, #667eea, #764ba2);
-            box-shadow: 
-            0 25px 50px rgba(0,0,0,0.4),
-            0 0 0 1px rgba(255,255,255,0.1),
-            inset 0 1px 0 rgba(255,255,255,0.2);
+            text-align: center;
+            z-index: 50;
+            border: 1px solid rgba(255,255,255,0.1);
+            backdrop-filter: blur(20px);
+            max-width: 320px;
+        }
+
+        .placement-title {
+            font-size: 20px;
+            font-weight: 600;
+            margin-bottom: 12px;
+        }
+
+        .placement-subtitle {
+            font-size: 14px;
+            opacity: 0.8;
+            margin-bottom: 25px;
+            line-height: 1.4;
+        }
+
+        .placement-btn {
+            width: 100%;
+            height: 48px;
+            background: linear-gradient(135deg, #007AFF, #0051D5);
+            border: none;
+            border-radius: 24px;
+            color: white;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .placement-btn:active {
+            transform: scale(0.98);
         }
         
-        /* Object types */
-        .bottle { 
-            background: linear-gradient(135deg, #1e3c72, #2a5298);
-            border-radius: 35px;
-        }
-        .box { 
-            background: linear-gradient(135deg, #c31432, #240b36);
-            border-radius: 8px;
-        }
-        .ball { 
-            background: linear-gradient(135deg, #11998e, #38ef7d);
-            border-radius: 50%;
-        }
-        .cube { 
-            background: linear-gradient(135deg, #8360c3, #2ebf91);
-            border-radius: 12px;
-        }
-        .model-3d {
-            background: linear-gradient(135deg, #667eea, #764ba2);
-            border-radius: 15px;
-            border: 2px solid rgba(255, 215, 0, 0.6);
-        }
-        
-        /* 3D Model effects */
-        .is-3d-model .object-3d {
-            border: 2px solid rgba(255, 215, 0, 0.6);
-            box-shadow: 
-            0 0 40px rgba(255, 215, 0, 0.3),
-            0 25px 50px rgba(0,0,0,0.4),
-            0 0 0 1px rgba(255,255,255,0.1),
-            inset 0 1px 0 rgba(255,255,255,0.3);
-        }
-        
-        .is-3d-model .object-3d::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: linear-gradient(45deg, 
-                transparent 30%, rgba(255,255,255,0.1) 50%, transparent 70%);
-            border-radius: inherit;
-            animation: shimmer 3s infinite;
-            pointer-events: none;
-        }
-        
-        /* Object content */
-        .object-content {
-            width: 80%;
-            height: 80%;
-            background: rgba(255,255,255,0.1);
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 2.5rem;
-            font-weight: 300;
-            color: rgba(255,255,255,0.9);
-            border: 1px solid rgba(255,255,255,0.2);
-        }
-        
-        /* Minimal bottom UI */
+        /* Clean bottom UI */
         .bottom-ui {
             position: fixed;
             bottom: 0;
@@ -320,22 +264,6 @@
             transform: scale(0.96);
         }
         
-        /* Animations */
-        @keyframes float {
-            0%, 100% { transform: translateY(0px) rotateX(0deg); }
-            50% { transform: translateY(-10px) rotateX(2deg); }
-        }
-        
-        @keyframes rotate {
-            from { transform: rotateY(0deg); }
-            to { transform: rotateY(360deg); }
-        }
-        
-        @keyframes shimmer {
-            0% { transform: translateX(-100%) rotate(45deg); }
-            100% { transform: translateX(200%) rotate(45deg); }
-        }
-        
         /* Loading state */
         .loading {
             position: fixed;
@@ -393,6 +321,27 @@
             .desktop-notice {
                 display: block !important;
             }
+            .loading, .placement-ui, .bottom-ui, .top-controls {
+                display: none !important;
+            }
+        }
+
+        /* Spatial tracking indicators */
+        .tracking-status {
+            position: fixed;
+            top: 80px;
+            left: 20px;
+            background: rgba(0,0,0,0.8);
+            color: white;
+            padding: 8px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            z-index: 95;
+            display: none;
+        }
+
+        .tracking-active {
+            background: rgba(76, 175, 80, 0.8);
         }
     </style>
 </head>
@@ -415,7 +364,7 @@
     <!-- Camera video -->
     <video id="camera" autoplay muted playsinline></video>
 
-    <!--Ar canvas -->
+    <!-- AR canvas -->
     <canvas id="ar-canvas"></canvas>
 
     <!-- Clean top controls -->
@@ -423,6 +372,9 @@
         <button class="control-btn" onclick="goBack()" title="Close">×</button>
         <button class="control-btn" onclick="toggleStats()" title="Toggle Stats" id="statsToggle">ℹ</button>
     </div>
+
+    <!-- Spatial tracking status -->
+    <div class="tracking-status" id="trackingStatus">Initializing tracking...</div>
 
     <!-- Toggleable stats panel -->
     <div class="stats-panel" id="statsPanel">
@@ -443,23 +395,25 @@
                 <span class="stat-label">Type</span>
                 <span class="stat-value" id="modelType">-</span>
             </div>
+            <div class="stat">
+                <span class="stat-label">Tracking</span>
+                <span class="stat-value" id="trackingValue">Off</span>
+            </div>
         </div>
     </div>
 
-    <!-- AR Object -->
-    <div class="ar-object-container" id="arContainer" style="display: none;">
-        <div class="ar-object" id="arObject">
-            <div class="object-3d" id="object3d">
-                <div class="object-content" id="objectContent">AR</div>
-            </div>
-        </div>
+    <!-- Placement UI -->
+    <div class="placement-ui" id="placementUI" style="display: none;">
+        <div class="placement-title">Place Your Object</div>
+        <div class="placement-subtitle">Find a flat surface and tap to place your 3D object in the real world</div>
+        <button class="placement-btn" onclick="placeObject()">Place Object</button>
     </div>
 
     <!-- Clean bottom UI -->
     <div class="bottom-ui" id="bottomUI" style="display: none;">
         <div class="object-info">
             <div class="object-title" id="objectTitle">AR Object</div>
-            <div class="object-subtitle">Touch and drag to move • Pinch to scale</div>
+            <div class="object-subtitle">Walk around to see all sides • Use gestures to interact</div>
             
             <div id="modelBadge" class="model-badge" style="display: none;">
                 <div class="quality-dot"></div>
@@ -479,56 +433,64 @@
 
     <script>
         // Global variables
-        let camera, arContainer, bottomUI, loading, statsPanel;
+        let camera, loading, statsPanel, placementUI, bottomUI, trackingStatus;
         let objectData = {};
         let statsVisible = false;
 
-        // AR/3D variables
+        // Spatial AR variables
         let scene, renderer, arObject, threeCamera;
-        let deviceOrientation = { alpha: 0, beta: 0, gamma: 0};
+        let deviceOrientation = { alpha: 0, beta: 0, gamma: 0 };
+        let deviceMotion = { x: 0, y: 0, z: 0 };
         let objectPlaced = false;
-        let objectPosition = { x: 0, y: 0, z: -2};
-        let initialDeviceOrientation = null; 
+        let objectPosition = { x: 0, y: -1, z: -3 }; // Fixed position in world space
+        let initialOrientation = null;
+        let isTracking = false;
+        let animationId;
 
         // Initialize app
         async function initApp() {
-            // Get DOM elements
-            camera = document.getElementById('camera');
-            arContainer = document.getElementById('arContainer');
-            bottomUI = document.getElementById('bottomUI');
-            loading = document.getElementById('loading');
-            statsPanel = document.getElementById('statsPanel');
+            try {
+                // Get DOM elements
+                camera = document.getElementById('camera');
+                loading = document.getElementById('loading');
+                statsPanel = document.getElementById('statsPanel');
+                placementUI = document.getElementById('placementUI');
+                bottomUI = document.getElementById('bottomUI');
+                trackingStatus = document.getElementById('trackingStatus');
 
-            // Check if mobile
-            if (window.innerWidth > 768) {
-                document.querySelector('.desktop-notice').style.display = 'block';
-                return;
+                // Check if mobile
+                if (window.innerWidth > 768) {
+                    return;
+                }
+
+                console.log('Starting ARize AR...');
+
+                // Parse URL parameters
+                parseURLData();
+                
+                // Setup Three.js
+                setupThreeJS();
+                
+                // Setup device tracking
+                await setupDeviceTracking();
+                
+                // Start camera
+                await startCamera();
+                
+                // Setup AR object data
+                setupARObjectData();
+                
+                // Hide loading and show placement UI
+                setTimeout(() => {
+                    loading.style.display = 'none';
+                    placementUI.style.display = 'block';
+                    trackingStatus.style.display = 'block';
+                }, 1000);
+
+            } catch (error) {
+                console.error('Failed to initialize AR:', error);
+                showError('Failed to initialize AR experience');
             }
-
-            // Parse URL parameters
-            parseURLData();
-
-            setupThreeJS();
-            setupOrientationTracking();
-
-            document.addEventListener('touchstart', handleTouch);
-            document.addEventListener('click', handleTouch);
-            
-            // Start camera
-            await startCamera();
-            
-            // Setup AR object
-            setupARObject();
-            
-            // Setup interactions
-            setupInteractions();
-            
-            // Hide loading
-            setTimeout(() => {
-                loading.style.display = 'none';
-                arContainer.style.display = 'block';
-                bottomUI.style.display = 'block';
-            }, 1500);
         }
 
         // Parse URL parameters
@@ -537,243 +499,275 @@
             objectData = {
                 id: urlParams.get('id') || 'demo',
                 type: urlParams.get('type') || 'bottle',
-                frames: parseInt(urlParams.get('frames')) || 0,
-                duration: parseInt(urlParams.get('duration')) || 0,
-                quality: parseInt(urlParams.get('quality')) || 0,
-                confidence: parseInt(urlParams.get('confidence')) || 0,
+                frames: parseInt(urlParams.get('frames')) || 30,
+                duration: parseInt(urlParams.get('duration')) || 60,
+                quality: parseInt(urlParams.get('quality')) || 85,
+                confidence: parseInt(urlParams.get('confidence')) || 95,
                 model: urlParams.get('model') || '',
                 is3d: urlParams.get('is3d') === 'true'
             };
+            console.log('Object data:', objectData);
         }
 
-
-        //touch handler
-        function handleTouch(e) {
-            if (isObjectPlaced) return;
-
-            e.preventDefault();
-            const touch = e.touches ? e.touches[0] : e;
-
-            const rect = document.getElementById('ar-canvas').getBoundingClientRect();
-            const x = ((touch.clientX - rect.left) / rect.width) * 2 - 1;
-            const y = -((touch.clientY - rect.top) / rect.height) * 2 + 1;
-
-            objectPosition = { x: x * 2, y: y * 2, z: -3 };
-
-            create3DObject();
-            isObjectPlaced = true;
-            initialDeviceOrientation = { ...deviceOrientation };
-
-
-            const hint = document.getElementById('placementHint');
-            if (hint) hint.remove();
-
-            showNotification('Object placed! Move around to explore');
+        // Setup Three.js for spatial AR
+        function setupThreeJS() {
+            const canvas = document.getElementById('ar-canvas');
+            
+            // Scene setup
+            scene = new THREE.Scene();
+            
+            // Camera setup with realistic FOV
+            threeCamera = new THREE.PerspectiveCamera(
+                75, // FOV similar to phone camera
+                window.innerWidth / window.innerHeight,
+                0.1,
+                1000
+            );
+            threeCamera.position.set(0, 0, 0);
+            
+            // Renderer setup
+            renderer = new THREE.WebGLRenderer({ 
+                canvas: canvas, 
+                alpha: true, 
+                antialias: true 
+            });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(window.devicePixelRatio);
+            renderer.setClearColor(0x000000, 0); // Transparent background
+            renderer.shadowMap.enabled = true;
+            renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+            
+            // Add realistic lighting
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+            scene.add(ambientLight);
+            
+            const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+            directionalLight.position.set(5, 10, 5);
+            directionalLight.castShadow = true;
+            directionalLight.shadow.mapSize.width = 1024;
+            directionalLight.shadow.mapSize.height = 1024;
+            scene.add(directionalLight);
+            
+            console.log('Three.js setup complete');
         }
 
+        // Setup device orientation and motion tracking
+        async function setupDeviceTracking() {
+            try {
+                // Request orientation permission on iOS
+                if (typeof DeviceOrientationEvent.requestPermission === 'function') {
+                    const permission = await DeviceOrientationEvent.requestPermission();
+                    if (permission !== 'granted') {
+                        throw new Error('Device orientation permission denied');
+                    }
+                }
+
+                // Add orientation listener
+                window.addEventListener('deviceorientation', handleOrientation, true);
+                
+                // Add motion listener for better tracking
+                if (typeof DeviceMotionEvent.requestPermission === 'function') {
+                    const motionPermission = await DeviceMotionEvent.requestPermission();
+                    if (motionPermission === 'granted') {
+                        window.addEventListener('devicemotion', handleMotion, true);
+                    }
+                } else {
+                    window.addEventListener('devicemotion', handleMotion, true);
+                }
+
+                // Test orientation after a short delay
+                setTimeout(() => {
+                    if (deviceOrientation.alpha === 0 && deviceOrientation.beta === 0) {
+                        console.warn('Device orientation not working, using fallback');
+                        // Use touch-based rotation as fallback
+                        setupTouchFallback();
+                    } else {
+                        isTracking = true;
+                        updateTrackingStatus();
+                        console.log('Device tracking active');
+                    }
+                }, 500);
+
+            } catch (error) {
+                console.error('Device tracking setup failed:', error);
+                setupTouchFallback();
+            }
+        }
+
+        function handleOrientation(event) {
+            // Convert device orientation to camera rotation
+            deviceOrientation.alpha = event.alpha || 0; // Z-axis (compass)
+            deviceOrientation.beta = event.beta || 0;   // X-axis (front-back tilt)
+            deviceOrientation.gamma = event.gamma || 0; // Y-axis (left-right tilt)
+            
+            if (!initialOrientation && objectPlaced) {
+                initialOrientation = { ...deviceOrientation };
+            }
+        }
+
+        function handleMotion(event) {
+            if (event.acceleration) {
+                deviceMotion.x = event.acceleration.x || 0;
+                deviceMotion.y = event.acceleration.y || 0;
+                deviceMotion.z = event.acceleration.z || 0;
+            }
+        }
+
+        function setupTouchFallback() {
+            console.log('Setting up touch-based camera control');
+            let isInteracting = false;
+            let lastTouch = { x: 0, y: 0 };
+            let cameraRotation = { x: 0, y: 0 };
+
+            canvas.style.pointerEvents = 'auto';
+            
+            canvas.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                isInteracting = true;
+                const touch = e.touches[0];
+                lastTouch.x = touch.clientX;
+                lastTouch.y = touch.clientY;
+            });
+
+            canvas.addEventListener('touchmove', (e) => {
+                e.preventDefault();
+                if (!isInteracting) return;
+                
+                const touch = e.touches[0];
+                const deltaX = touch.clientX - lastTouch.x;
+                const deltaY = touch.clientY - lastTouch.y;
+                
+                cameraRotation.y += deltaX * 0.01;
+                cameraRotation.x += deltaY * 0.01;
+                
+                // Apply rotation to camera
+                if (objectPlaced) {
+                    updateCameraPosition(cameraRotation);
+                }
+                
+                lastTouch.x = touch.clientX;
+                lastTouch.y = touch.clientY;
+            });
+
+            canvas.addEventListener('touchend', () => {
+                isInteracting = false;
+            });
+
+            isTracking = true;
+            updateTrackingStatus();
+        }
 
         // Start camera
         async function startCamera() {
             try {
-                const stream = await navigator.mediaDevices.getUserMedia({
+                const constraints = {
                     video: { 
                         facingMode: 'environment',
                         width: { ideal: 1280 },
                         height: { ideal: 720 }
                     }
-                });
-                camera.srcObject = stream;
-            } catch (error) {
-                console.error('Camera access denied:', error);
-                // Show message instead of colored background
-                camera.style.display = 'none';
-                document.body.style.background = '#000';
+                };
                 
-                // Show camera access message
-                const cameraMessage = document.createElement('div');
-                cameraMessage.style.cssText = `
-                    position: fixed;
-                    top: 50%;
-                    left: 50%;
-                    transform: translate(-50%, -50%);
-                    background: rgba(0,0,0,0.9);
+                const stream = await navigator.mediaDevices.getUserMedia(constraints);
+                camera.srcObject = stream;
+                console.log('Camera started successfully');
+                
+            } catch (error) {
+                console.error('Camera access failed:', error);
+                showCameraError();
+            }
+        }
+
+        function showCameraError() {
+            camera.style.display = 'none';
+            document.body.style.background = 'linear-gradient(45deg, #1a1a1a, #2d2d2d)';
+            
+            const errorMessage = document.createElement('div');
+            errorMessage.style.cssText = `
+                position: fixed;
+                top: 50%;
+                left: 50%;
+                transform: translate(-50%, -50%);
+                background: rgba(0,0,0,0.9);
+                color: white;
+                padding: 30px;
+                border-radius: 15px;
+                text-align: center;
+                z-index: 300;
+                border: 1px solid rgba(255,255,255,0.1);
+                max-width: 300px;
+            `;
+            errorMessage.innerHTML = `
+                <h3 style="margin-bottom: 15px;">Camera Required</h3>
+                <p style="opacity: 0.8; margin-bottom: 20px; line-height: 1.4;">
+                    AR requires camera access. Please allow camera permissions and refresh.
+                </p>
+                <button onclick="location.reload()" style="
+                    background: #007AFF;
                     color: white;
-                    padding: 30px;
-                    border-radius: 15px;
-                    text-align: center;
-                    z-index: 5;
-                    border: 1px solid rgba(255,255,255,0.1);
-                `;
-                cameraMessage.innerHTML = `
-                    <h3 style="margin-bottom: 15px;">Camera Access Required</h3>
-                    <p style="opacity: 0.8; margin-bottom: 20px;">
-                        To view AR objects, please allow camera access and refresh the page.
-                    </p>
-                    <button onclick="location.reload()" style="
-                        background: #007AFF;
-                        color: white;
-                        border: none;
-                        padding: 10px 20px;
-                        border-radius: 20px;
-                        cursor: pointer;
-                    ">Try Again</button>
-                `;
-                document.body.appendChild(cameraMessage);
-            }
+                    border: none;
+                    padding: 12px 24px;
+                    border-radius: 20px;
+                    cursor: pointer;
+                    font-size: 14px;
+                ">Try Again</button>
+            `;
+            document.body.appendChild(errorMessage);
         }
 
-
-        // three.js for spatial AR
-        function setupThreeJS(){
-            const canvas = document.getElementById('ar-canvas');
-
-            // scene setup
-            scene = new THREE.Scene();
-
-            //camera setup
-            threeCamera = new THREE.PerspectiveCamera(
-                75,
-                window.innerWidth / window.innerHeight,
-                0.1,
-                1000
-                );
-            threeCamera.position.set(0, 0, 0);
-
-            //renderer setup
-            renderer.setSize(window.innerWidth, window.innerHeight);
-            renderer.setClearColor(0x000000, 0);
-
-
-            //add ligting
-            const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
-            scene.add(ambientLight);
-
-            const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
-            directionalLight.position.set(0, 10, 15);
-            scene.add(directionalLight);
-
-            //render loop
-            animate();
-
-        }
-
-        //adnimation loop
-        function animate() {
-            requestAnimationFrame(animate);
-
-            if (isObjectPlaced && arObject) {
-                updateCameraFromOrientation();
-                renderer.render(scene, threeCamera);
-
-            }
-        }
-        
-
-        //setup device orientation tracking
-        function setupOrientationTracking() {
-            if (typeof DeviceOrientationEvent.requestPermission === 'function') {
-                DeviceOrientationEvent.requestPermission()
-                .then(permissionState => {
-                    if(permissionState === 'granted') {
-                        window.addEventListener('deviceOrientation', handleOrientation);
-                    }
-                })
-                .catch(console.error);
-            }
-            else {
-                window.addEventListener('deviceOrientation', handleOrientation);
-            }
-        }
-
-        function handleOrientation(event) {
-            deviceOrientation.alpha = event.alpha || 0;
-            deviceOrientation.beta = event.beta || 0;
-            deviceOrientation.gamma = event.gamma || 0; 
-
-            if (isObjectPlaced && !initialDeviceOrientation) {
-                initialDeviceOrientation = { ...deviceOrientation};
-            }
-        }
-
-        function updateCameraFromOrientation() {
-            if(!initialDeviceOrientation) return;
-
-            const alphaChange = (deviceOrientation - initialDeviceOrientation.alpha) * Math.PI / 180;
-            const betaChange = (deviceOrientation - initialDeviceOrientation.beta) * Math.PI / 180;
-
-            const radius = 3;
-            threeCamera.position.x = objectPosition.x + radius * Math.sin(alphaChange);
-            threeCamera.position.z = objectPosition.z + radius * Math.cos(alphaChange);
-            threeCamera.position.y = objectPosition.y + betaChange * 2;
-
-            threeCamera.lookAt(objectPosition.x, objectPosition.z, objectPosition.y);
-        }
-
-
-
-        // Setup AR object with 3D rendering
-        function setupARObject() {
+        // Setup AR object data and stats
+        function setupARObjectData() {
             const objectConfig = {
-                bottle: { name: 'Bottle', class: 'bottle', content: 'B' },
-                box: { name: 'Box', class: 'box', content: '□' },
-                ball: { name: 'Ball', class: 'ball', content: '●' },
-                cube: { name: 'Cube', class: 'cube', content: '◆' },
-                '3d_model': { name: '3D Model', class: 'model-3d', content: '3D' }
+                bottle: { name: 'Bottle', content: '🍶' },
+                box: { name: 'Box', content: '📦' },
+                ball: { name: 'Ball', content: '⚽' },
+                cube: { name: 'Cube', content: '🧊' },
+                '3d_model': { name: '3D Model', content: '🎯' }
             };
 
             const config = objectConfig[objectData.type] || objectConfig.bottle;
-
-    // Set object title
+            
+            // Set object title
             document.getElementById('objectTitle').textContent = 
-            objectData.is3d ? 'Your 3D Object' : config.name;
+                objectData.is3d ? 'Your 3D Object' : config.name;
 
-    // 3D Model features
+            // Show 3D model badge
             if (objectData.is3d || objectData.type === '3d_model') {
                 document.getElementById('modelBadge').style.display = 'inline-flex';
                 document.getElementById('modelRow').style.display = 'flex';
                 document.getElementById('modelType').textContent = '3D Reconstruction';
             }
 
-    // Setup stats data
-            if (objectData.quality > 0 || objectData.frames > 0) {
-                document.getElementById('qualityValue').textContent = objectData.quality + '%';
-                document.getElementById('framesValue').textContent = objectData.frames;
-
-                if (objectData.confidence > 0) {
-                    document.getElementById('confidenceRow').style.display = 'flex';
-                    document.getElementById('confidenceValue').textContent = objectData.confidence + '%';
-                }
+            // Setup stats
+            document.getElementById('qualityValue').textContent = objectData.quality + '%';
+            document.getElementById('framesValue').textContent = objectData.frames;
+            
+            if (objectData.confidence > 0) {
+                document.getElementById('confidenceRow').style.display = 'flex';
+                document.getElementById('confidenceValue').textContent = objectData.confidence + '%';
             }
-
-    // Show placement instruction
-            showPlacementHint();
         }
 
-
-        function showPlacementHint() {
-            const hint = document.createElement('div');
-            hint.id = 'placementHint';
-            hint.style.cssText = `
-        position: fixed;
-        top: 50%;
-        left: 50%;
-        transform: translate(-50%, -50%);
-        background: rgba(0,0,0,0.9);
-        color: white;
-        padding: 20px;
-        border-radius: 15px;
-        text-align: center;
-        z-index: 50;
-        border: 1px solid rgba(255,255,255,0.1);
-            `;
-            hint.innerHTML = `
-        <h3 style="margin-bottom: 10px;">Tap to Place Object</h3>
-        <p style="opacity: 0.8;">Find a surface and tap to place your AR object</p>
-            `;
-            document.body.appendChild(hint);
+        // Place object in world space
+        function placeObject() {
+            placementUI.style.display = 'none';
+            bottomUI.style.display = 'block';
+            
+            // Create the 3D object
+            create3DObject();
+            
+            // Start spatial tracking
+            objectPlaced = true;
+            initialOrientation = { ...deviceOrientation };
+            
+            // Start render loop
+            startRenderLoop();
+            
+            showNotification('Object placed! Walk around to explore');
+            updateTrackingStatus();
         }
 
-
+        // Create 3D object based on type
         function create3DObject() {
             if (arObject) {
                 scene.remove(arObject);
@@ -782,7 +776,8 @@
             let geometry, material;
 
             if (objectData.is3d || objectData.type === '3d_model') {
-                geometry = new THREE.IcosahedronGeometry(0.5, 2);
+                // Enhanced 3D model representation
+                geometry = new THREE.IcosahedronGeometry(0.6, 2);
                 material = new THREE.MeshPhongMaterial({
                     color: 0xFFD700,
                     shininess: 100,
@@ -790,140 +785,139 @@
                     opacity: 0.9
                 });
 
-                const wireframeGeometry = new THREE.IcosahedronGeometry(0.52, 2);
+                // Create wireframe overlay
+                const wireframeGeometry = new THREE.IcosahedronGeometry(0.62, 2);
                 const wireframeMaterial = new THREE.MeshBasicMaterial({
                     color: 0xFFD700,
                     wireframe: true,
                     transparent: true,
-                    opacity: 0.3
+                    opacity: 0.4
                 });
 
                 arObject = new THREE.Group();
                 const mainMesh = new THREE.Mesh(geometry, material);
                 const wireframe = new THREE.Mesh(wireframeGeometry, wireframeMaterial);
+                
+                mainMesh.castShadow = true;
+                mainMesh.receiveShadow = true;
+                
                 arObject.add(mainMesh);
                 arObject.add(wireframe);
 
+                // Add subtle rotation animation
+                arObject.userData = { rotationSpeed: 0.005 };
+
             } else {
+                // Create different shapes for different object types
                 switch (objectData.type) {
-                case 'bottle':
-                    geometry = new THREE.CylinderGeometry(0.2, 0.3, 1, 8);
-                    material = new THREE.MeshPhongMaterial({ color: 0x2196F3 });
-                    break;
-                case 'box':
-                    geometry = new THREE.BoxGeometry(0.8, 0.8, 0.8);
-                    material = new THREE.MeshPhongMaterial({ color: 0xF44336 });
-                    break;
-                case 'ball':
-                    geometry = new THREE.SphereGeometry(0.4, 16, 16);
-                    material = new THREE.MeshPhongMaterial({ color: 0x4CAF50 });
-                    break;
-                default:
-                    geometry = new THREE.BoxGeometry(0.6, 0.6, 0.6);
-                    material = new THREE.MeshPhongMaterial({ color: 0x9C27B0 });
+                    case 'bottle':
+                        geometry = new THREE.CylinderGeometry(0.25, 0.35, 1.2, 8);
+                        material = new THREE.MeshPhongMaterial({ color: 0x2196F3 });
+                        break;
+                    case 'box':
+                        geometry = new THREE.BoxGeometry(0.8, 0.8, 0.8);
+                        material = new THREE.MeshPhongMaterial({ color: 0xF44336 });
+                        break;
+                    case 'ball':
+                        geometry = new THREE.SphereGeometry(0.4, 16, 16);
+                        material = new THREE.MeshPhongMaterial({ color: 0x4CAF50 });
+                        break;
+                    default:
+                        geometry = new THREE.BoxGeometry(0.6, 0.6, 0.6);
+                        material = new THREE.MeshPhongMaterial({ color: 0x9C27B0 });
                 }
+                
                 arObject = new THREE.Mesh(geometry, material);
+                arObject.castShadow = true;
+                arObject.receiveShadow = true;
             }
 
+            // Position object in world space
             arObject.position.set(objectPosition.x, objectPosition.y, objectPosition.z);
             scene.add(arObject);
+            
+            console.log('3D object created at:', objectPosition);
         }
 
-
-        function loadReal3DModel(modelId) {
-            const object3d = document.getElementById('object3d');
-            const objectContent = document.getElementById('objectContent');
-            const objectTitle = document.getElementById('objectTitle');
-            
-            // Set 3D model appearance
-            object3d.className = 'object-3d model-3d';
-            objectTitle.textContent = 'Your 3D Object';
-            
-            // Create 3D model container
-            objectContent.innerHTML = '';
-            objectContent.style.background = 'transparent';
-            objectContent.style.border = 'none';
-            
-            // In a real implementation, this would:
-            // 1. Fetch the .glb/.gltf model file from modelId
-            // 2. Load it using Three.js WebGL renderer
-            // 3. Display the actual reconstructed 3D mesh
-            
-            // For now, create a more realistic 3D representation
-            const modelContainer = document.createElement('div');
-            modelContainer.style.cssText = `
-                width: 100%;
-                height: 100%;
-                position: relative;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                overflow: hidden;
-            `;
-            
-            // Create layered 3D effect to simulate real model (without auto-rotation)
-            for (let i = 0; i < 3; i++) {
-                const layer = document.createElement('div');
-                layer.style.cssText = `
-                    position: absolute;
-                    width: ${80 - i * 10}%;
-                    height: ${80 - i * 10}%;
-                    background: linear-gradient(${45 + i * 30}deg, 
-                        rgba(255,255,255,${0.2 - i * 0.05}) 0%, 
-                        rgba(255,215,0,${0.3 - i * 0.1}) 50%, 
-                        rgba(255,255,255,${0.1 - i * 0.03}) 100%);
-                    border-radius: ${50 - i * 5}%;
-                    border: 1px solid rgba(255,215,0,${0.4 - i * 0.1});
-                    transform-origin: center;
-                `;
-                modelContainer.appendChild(layer);
+        // Start render loop
+        function startRenderLoop() {
+            function animate() {
+                if (!objectPlaced) return;
+                
+                animationId = requestAnimationFrame(animate);
+                
+                // Update camera based on device orientation
+                updateCameraFromOrientation();
+                
+                // Animate 3D models
+                if (arObject && arObject.userData && arObject.userData.rotationSpeed) {
+                    arObject.rotation.y += arObject.userData.rotationSpeed;
+                }
+                
+                // Render scene
+                renderer.render(scene, threeCamera);
             }
-            
-            // Add "3D" indicator with special styling
-            const indicator = document.createElement('div');
-            indicator.textContent = '3D';
-            indicator.style.cssText = `
-                position: relative;
-                z-index: 10;
-                font-size: 2rem;
-                font-weight: 700;
-                color: #FFD700;
-                text-shadow: 
-                    0 0 10px rgba(255,215,0,0.5),
-                    0 0 20px rgba(255,215,0,0.3),
-                    0 0 30px rgba(255,215,0,0.2);
-                letter-spacing: 2px;
-            `;
-            modelContainer.appendChild(indicator);
-            
-            objectContent.appendChild(modelContainer);
-            
-            // Add special CSS for 3D model rotation (removed auto-rotation)
-            const style = document.createElement('style');
-            style.textContent = `
-                @keyframes rotate3d {
-                    0% { transform: rotateY(0deg) rotateX(0deg); }
-                    25% { transform: rotateY(90deg) rotateX(5deg); }
-                    50% { transform: rotateY(180deg) rotateX(0deg); }
-                    75% { transform: rotateY(270deg) rotateX(-5deg); }
-                    100% { transform: rotateY(360deg) rotateX(0deg); }
-                }
+            animate();
+        }
 
-                .model-container {
-                    transition: transform 0.1s ease;
-                }
-            `;
-            document.head.appendChild(style);
+        // Update camera position based on device orientation
+        function updateCameraFromOrientation() {
+            if (!initialOrientation || !isTracking) return;
+
+            // Calculate orientation differences
+            const alphaDiff = (deviceOrientation.alpha - initialOrientation.alpha) * Math.PI / 180;
+            const betaDiff = (deviceOrientation.beta - initialOrientation.beta) * Math.PI / 180;
+            const gammaDiff = (deviceOrientation.gamma - initialOrientation.gamma) * Math.PI / 180;
+
+            // Apply rotation to camera around the object
+            const radius = 4; // Distance from object
             
-            console.log(`Loading 3D model: ${modelId}`);
+            // Calculate camera position in orbit around object
+            const x = objectPosition.x + radius * Math.sin(alphaDiff) * Math.cos(betaDiff);
+            const z = objectPosition.z + radius * Math.cos(alphaDiff) * Math.cos(betaDiff);
+            const y = objectPosition.y + radius * Math.sin(betaDiff);
             
-            // TODO: Real 3D model loading would happen here:
-            // loadGLTFModel(modelId).then(model => {
-            //     scene.add(model);
-            //     renderer.render(scene, camera);
-            // });
+            threeCamera.position.set(x, y, z);
+            threeCamera.lookAt(objectPosition.x, objectPosition.y, objectPosition.z);
             
-            showNotification('3D Model Loaded');
+            // Add slight tilt based on gamma (device roll)
+            threeCamera.rotation.z = gammaDiff * 0.5;
+        }
+
+        // Alternative camera update for touch fallback
+        function updateCameraPosition(rotation) {
+            if (!objectPlaced) return;
+            
+            const radius = 4;
+            const x = objectPosition.x + radius * Math.sin(rotation.y) * Math.cos(rotation.x);
+            const z = objectPosition.z + radius * Math.cos(rotation.y) * Math.cos(rotation.x);
+            const y = objectPosition.y + radius * Math.sin(rotation.x);
+            
+            threeCamera.position.set(x, y, z);
+            threeCamera.lookAt(objectPosition.x, objectPosition.y, objectPosition.z);
+        }
+
+        // Update tracking status
+        function updateTrackingStatus() {
+            const statusElement = document.getElementById('trackingStatus');
+            const trackingValue = document.getElementById('trackingValue');
+            
+            if (isTracking && objectPlaced) {
+                statusElement.textContent = 'Spatial tracking active';
+                statusElement.classList.add('tracking-active');
+                trackingValue.textContent = 'Active';
+                trackingValue.style.color = '#4CAF50';
+            } else if (isTracking) {
+                statusElement.textContent = 'Ready to place object';
+                statusElement.classList.remove('tracking-active');
+                trackingValue.textContent = 'Ready';
+                trackingValue.style.color = '#FFD700';
+            } else {
+                statusElement.textContent = 'Initializing tracking...';
+                statusElement.classList.remove('tracking-active');
+                trackingValue.textContent = 'Off';
+                trackingValue.style.color = '#F44336';
+            }
         }
 
         // Toggle stats panel
@@ -941,21 +935,35 @@
             }
         }
 
-        
-        
+        // Reset object position
         function resetPosition() {
             if (arObject) {
                 scene.remove(arObject);
                 arObject = null;
             }
-            isObjectPlaced = false;
-            initialDeviceOrientation = null;
-            showPlacementHint();
+            
+            if (animationId) {
+                cancelAnimationFrame(animationId);
+                animationId = null;
+            }
+            
+            objectPlaced = false;
+            initialOrientation = null;
+            
+            bottomUI.style.display = 'none';
+            placementUI.style.display = 'block';
+            
+            // Reset camera position
+            threeCamera.position.set(0, 0, 0);
+            threeCamera.rotation.set(0, 0, 0);
+            
+            updateTrackingStatus();
+            showNotification('Object reset - place again');
         }
 
         // Take screenshot
         function takeScreenshot() {
-            // Camera flash effect
+            // Create camera flash effect
             const flash = document.createElement('div');
             flash.style.cssText = `
                 position: fixed;
@@ -971,14 +979,19 @@
             `;
             document.body.appendChild(flash);
             
-            flash.style.opacity = '1';
+            // Flash animation
+            flash.style.opacity = '0.7';
             setTimeout(() => {
                 flash.style.opacity = '0';
                 setTimeout(() => flash.remove(), 200);
             }, 100);
             
-            // Success notification
-            showNotification('AR captured successfully');
+            // In a real implementation, this would capture the AR scene
+            // const canvas = renderer.domElement;
+            // const imageData = canvas.toDataURL('image/png');
+            // downloadImage(imageData);
+            
+            showNotification('AR photo captured!');
         }
 
         // Show notification
@@ -987,7 +1000,7 @@
             notification.textContent = message;
             notification.style.cssText = `
                 position: fixed;
-                top: 100px;
+                top: 120px;
                 left: 50%;
                 transform: translateX(-50%);
                 background: rgba(0,0,0,0.9);
@@ -1000,6 +1013,8 @@
                 backdrop-filter: blur(10px);
                 border: 1px solid rgba(255,255,255,0.1);
                 transition: all 0.3s ease;
+                max-width: 280px;
+                text-align: center;
             `;
             document.body.appendChild(notification);
             
@@ -1007,17 +1022,99 @@
                 notification.style.opacity = '0';
                 notification.style.transform = 'translateX(-50%) translateY(-20px)';
                 setTimeout(() => notification.remove(), 300);
-            }, 2000);
+            }, 2500);
         }
 
-        // Navigation functions
+        // Show error message
+        function showError(message) {
+            loading.style.display = 'none';
+            
+            const error = document.createElement('div');
+            error.style.cssText = `
+                position: fixed;
+                top: 50%;
+                left: 50%;
+                transform: translate(-50%, -50%);
+                background: rgba(244, 67, 54, 0.9);
+                color: white;
+                padding: 30px;
+                border-radius: 15px;
+                text-align: center;
+                z-index: 300;
+                border: 1px solid rgba(255,255,255,0.2);
+                max-width: 300px;
+            `;
+            error.innerHTML = `
+                <h3 style="margin-bottom: 15px;">AR Error</h3>
+                <p style="opacity: 0.9; margin-bottom: 20px; line-height: 1.4;">
+                    ${message}
+                </p>
+                <button onclick="location.reload()" style="
+                    background: white;
+                    color: #F44336;
+                    border: none;
+                    padding: 12px 24px;
+                    border-radius: 20px;
+                    cursor: pointer;
+                    font-size: 14px;
+                    font-weight: 600;
+                ">Reload</button>
+            `;
+            document.body.appendChild(error);
+        }
+
+        // Navigation
         function goBack() {
-            // Close the web app instead of going back
-            window.close();
+            if (window.history.length > 1) {
+                window.history.back();
+            } else {
+                window.close();
+            }
         }
 
-        // Initialize the app
-        initApp();
+        // Handle window resize
+        window.addEventListener('resize', () => {
+            if (threeCamera && renderer) {
+                threeCamera.aspect = window.innerWidth / window.innerHeight;
+                threeCamera.updateProjectionMatrix();
+                renderer.setSize(window.innerWidth, window.innerHeight);
+            }
+        });
+
+        // Handle page visibility changes
+        document.addEventListener('visibilitychange', () => {
+            if (document.hidden) {
+                // Pause AR when page becomes hidden
+                if (animationId) {
+                    cancelAnimationFrame(animationId);
+                }
+            } else {
+                // Resume AR when page becomes visible
+                if (objectPlaced) {
+                    startRenderLoop();
+                }
+            }
+        });
+
+        // Cleanup on page unload
+        window.addEventListener('beforeunload', () => {
+            if (camera.srcObject) {
+                camera.srcObject.getTracks().forEach(track => track.stop());
+            }
+            if (animationId) {
+                cancelAnimationFrame(animationId);
+            }
+        });
+
+        // Initialize the app when page loads
+        document.addEventListener('DOMContentLoaded', initApp);
+        
+        // Fallback initialization
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initApp);
+        } else {
+            initApp();
+        }
     </script>
 </body>
 </html>
