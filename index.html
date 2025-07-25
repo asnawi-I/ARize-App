@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <title>ARize - 3D AR Viewer</title>
     <style>
         * { 
@@ -29,6 +30,16 @@
             height: 100%;
             object-fit: cover;
             z-index: 1;
+        }
+
+        #ar-canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 10;
+            pointer-events: none;
         }
         
         /* Clean top controls */
@@ -101,9 +112,9 @@
             overflow: hidden;
             background: linear-gradient(135deg, #667eea, #764ba2);
             box-shadow: 
-                0 25px 50px rgba(0,0,0,0.4),
-                0 0 0 1px rgba(255,255,255,0.1),
-                inset 0 1px 0 rgba(255,255,255,0.2);
+            0 25px 50px rgba(0,0,0,0.4),
+            0 0 0 1px rgba(255,255,255,0.1),
+            inset 0 1px 0 rgba(255,255,255,0.2);
         }
         
         /* Object types */
@@ -133,10 +144,10 @@
         .is-3d-model .object-3d {
             border: 2px solid rgba(255, 215, 0, 0.6);
             box-shadow: 
-                0 0 40px rgba(255, 215, 0, 0.3),
-                0 25px 50px rgba(0,0,0,0.4),
-                0 0 0 1px rgba(255,255,255,0.1),
-                inset 0 1px 0 rgba(255,255,255,0.3);
+            0 0 40px rgba(255, 215, 0, 0.3),
+            0 25px 50px rgba(0,0,0,0.4),
+            0 0 0 1px rgba(255,255,255,0.1),
+            inset 0 1px 0 rgba(255,255,255,0.3);
         }
         
         .is-3d-model .object-3d::before {
@@ -404,6 +415,9 @@
     <!-- Camera video -->
     <video id="camera" autoplay muted playsinline></video>
 
+    <!--Ar canvas -->
+    <canvas id="ar-canvas"></canvas>
+
     <!-- Clean top controls -->
     <div class="top-controls">
         <button class="control-btn" onclick="goBack()" title="Close">×</button>
@@ -467,11 +481,14 @@
         // Global variables
         let camera, arContainer, bottomUI, loading, statsPanel;
         let objectData = {};
-        let isDragging = false;
-        let startX, startY;
-        let currentX = 0, currentY = 0;
-        let scale = 1;
         let statsVisible = false;
+
+        // AR/3D variables
+        let scene, renderer, arObject, threeCamera;
+        let deviceOrientation = { alpha: 0, beta: 0, gamma: 0};
+        let objectPlaced = false;
+        let objectPosition = { x: 0, y: 0, z: -2};
+        let initialDeviceOrientation = null; 
 
         // Initialize app
         async function initApp() {
@@ -490,6 +507,12 @@
 
             // Parse URL parameters
             parseURLData();
+
+            setupThreeJS();
+            setupOrientationTracking();
+
+            document.addEventListener('touchstart', handleTouch);
+            document.addEventListener('click', handleTouch);
             
             // Start camera
             await startCamera();
@@ -522,6 +545,32 @@
                 is3d: urlParams.get('is3d') === 'true'
             };
         }
+
+
+        //touch handler
+        function handleTouch(e) {
+            if (isObjectPlaced) return;
+
+            e.preventDefault();
+            const touch = e.touches ? e.touches[0] : e;
+
+            const rect = document.getElementById('ar-canvas').getBoundingClientRect();
+            const x = ((touch.clientX - rect.left) / rect.width) * 2 - 1;
+            const y = -((touch.clientY - rect.top) / rect.height) * 2 + 1;
+
+            objectPosition = { x: x * 2, y: y * 2, z: -3 };
+
+            create3DObject();
+            isObjectPlaced = true;
+            initialDeviceOrientation = { ...deviceOrientation };
+
+
+            const hint = document.getElementById('placementHint');
+            if (hint) hint.remove();
+
+            showNotification('Object placed! Move around to explore');
+        }
+
 
         // Start camera
         async function startCamera() {
@@ -573,7 +622,96 @@
             }
         }
 
-        // Setup AR object
+
+        // three.js for spatial AR
+        function setupThreeJS(){
+            const canvas = document.getElementById('ar-canvas');
+
+            // scene setup
+            scene = new THREE.Scene();
+
+            //camera setup
+            threeCamera = new THREE.PerspectiveCamera(
+                75,
+                window.innerWidth / window.innerHeight,
+                0.1,
+                1000
+                );
+            threeCamera.position.set(0, 0, 0);
+
+            //renderer setup
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setClearColor(0x000000, 0);
+
+
+            //add ligting
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+            scene.add(ambientLight);
+
+            const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+            directionalLight.position.set(0, 10, 15);
+            scene.add(directionalLight);
+
+            //render loop
+            animate();
+
+        }
+
+        //adnimation loop
+        function animate() {
+            requestAnimationFrame(animate);
+
+            if (isObjectPlaced && arObject) {
+                updateCameraFromOrientation();
+                renderer.render(scene, threeCamera);
+
+            }
+        }
+        
+
+        //setup device orientation tracking
+        function setupOrientationTracking() {
+            if (typeof DeviceOrientationEvent.requestPermission === 'function') {
+                DeviceOrientationEvent.requestPermission()
+                .then(permissionState => {
+                    if(permissionState === 'granted') {
+                        window.addEventListener('deviceOrientation', handleOrientation);
+                    }
+                })
+                .catch(console.error);
+            }
+            else {
+                window.addEventListener('deviceOrientation', handleOrientation);
+            }
+        }
+
+        function handleOrientation(event) {
+            deviceOrientation.alpha = event.alpha || 0;
+            deviceOrientation.beta = event.beta || 0;
+            deviceOrientation.gamma = event.gamma || 0; 
+
+            if (isObjectPlaced && !initialDeviceOrientation) {
+                initialDeviceOrientation = { ...deviceOrientation};
+            }
+        }
+
+        function updateCameraFromOrientation() {
+            if(!initialDeviceOrientation) return;
+
+            const alphaChange = (deviceOrientation - initialDeviceOrientation.alpha) * Math.PI / 180;
+            const betaChange = (deviceOrientation - initialDeviceOrientation.beta) * Math.PI / 180;
+
+            const radius = 3;
+            threeCamera.position.x = objectPosition.x + radius * Math.sin(alphaChange);
+            threeCamera.position.z = objectPosition.z + radius * Math.cos(alphaChange);
+            threeCamera.position.y = objectPosition.y + betaChange * 2;
+
+            threeCamera.lookAt(objectPosition.x, objectPosition.z, objectPosition.y);
+        }
+
+
+
+        // Setup AR object with 3D rendering
         function setupARObject() {
             const objectConfig = {
                 bottle: { name: 'Bottle', class: 'bottle', content: 'B' },
@@ -584,43 +722,114 @@
             };
 
             const config = objectConfig[objectData.type] || objectConfig.bottle;
-            
-            // Set object appearance
-            const object3d = document.getElementById('object3d');
-            const objectContent = document.getElementById('objectContent');
-            const objectTitle = document.getElementById('objectTitle');
-            
-            // Check if this is a real 3D model
-            if (objectData.is3d === true || objectData.type === '3d_model') {
-                loadReal3DModel(objectData.model || objectData.id);
-            } else {
-                // Setup generic object
-                object3d.className = `object-3d ${config.class}`;
-                objectContent.textContent = config.content;
-                objectTitle.textContent = config.name;
-            }
-            
-            // 3D Model features
+
+    // Set object title
+            document.getElementById('objectTitle').textContent = 
+            objectData.is3d ? 'Your 3D Object' : config.name;
+
+    // 3D Model features
             if (objectData.is3d || objectData.type === '3d_model') {
-                document.getElementById('arObject').classList.add('is-3d-model');
                 document.getElementById('modelBadge').style.display = 'inline-flex';
                 document.getElementById('modelRow').style.display = 'flex';
                 document.getElementById('modelType').textContent = '3D Reconstruction';
             }
-            
-            // Setup stats data
+
+    // Setup stats data
             if (objectData.quality > 0 || objectData.frames > 0) {
                 document.getElementById('qualityValue').textContent = objectData.quality + '%';
                 document.getElementById('framesValue').textContent = objectData.frames;
-                
+
                 if (objectData.confidence > 0) {
                     document.getElementById('confidenceRow').style.display = 'flex';
                     document.getElementById('confidenceValue').textContent = objectData.confidence + '%';
                 }
             }
+
+    // Show placement instruction
+            showPlacementHint();
         }
 
-        // Load real 3D model from reconstruction data
+
+        function showPlacementHint() {
+            const hint = document.createElement('div');
+            hint.id = 'placementHint';
+            hint.style.cssText = `
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        background: rgba(0,0,0,0.9);
+        color: white;
+        padding: 20px;
+        border-radius: 15px;
+        text-align: center;
+        z-index: 50;
+        border: 1px solid rgba(255,255,255,0.1);
+            `;
+            hint.innerHTML = `
+        <h3 style="margin-bottom: 10px;">Tap to Place Object</h3>
+        <p style="opacity: 0.8;">Find a surface and tap to place your AR object</p>
+            `;
+            document.body.appendChild(hint);
+        }
+
+
+        function create3DObject() {
+            if (arObject) {
+                scene.remove(arObject);
+            }
+
+            let geometry, material;
+
+            if (objectData.is3d || objectData.type === '3d_model') {
+                geometry = new THREE.IcosahedronGeometry(0.5, 2);
+                material = new THREE.MeshPhongMaterial({
+                    color: 0xFFD700,
+                    shininess: 100,
+                    transparent: true,
+                    opacity: 0.9
+                });
+
+                const wireframeGeometry = new THREE.IcosahedronGeometry(0.52, 2);
+                const wireframeMaterial = new THREE.MeshBasicMaterial({
+                    color: 0xFFD700,
+                    wireframe: true,
+                    transparent: true,
+                    opacity: 0.3
+                });
+
+                arObject = new THREE.Group();
+                const mainMesh = new THREE.Mesh(geometry, material);
+                const wireframe = new THREE.Mesh(wireframeGeometry, wireframeMaterial);
+                arObject.add(mainMesh);
+                arObject.add(wireframe);
+
+            } else {
+                switch (objectData.type) {
+                case 'bottle':
+                    geometry = new THREE.CylinderGeometry(0.2, 0.3, 1, 8);
+                    material = new THREE.MeshPhongMaterial({ color: 0x2196F3 });
+                    break;
+                case 'box':
+                    geometry = new THREE.BoxGeometry(0.8, 0.8, 0.8);
+                    material = new THREE.MeshPhongMaterial({ color: 0xF44336 });
+                    break;
+                case 'ball':
+                    geometry = new THREE.SphereGeometry(0.4, 16, 16);
+                    material = new THREE.MeshPhongMaterial({ color: 0x4CAF50 });
+                    break;
+                default:
+                    geometry = new THREE.BoxGeometry(0.6, 0.6, 0.6);
+                    material = new THREE.MeshPhongMaterial({ color: 0x9C27B0 });
+                }
+                arObject = new THREE.Mesh(geometry, material);
+            }
+
+            arObject.position.set(objectPosition.x, objectPosition.y, objectPosition.z);
+            scene.add(arObject);
+        }
+
+
         function loadReal3DModel(modelId) {
             const object3d = document.getElementById('object3d');
             const objectContent = document.getElementById('objectContent');
@@ -699,7 +908,7 @@
                     75% { transform: rotateY(270deg) rotateX(-5deg); }
                     100% { transform: rotateY(360deg) rotateX(0deg); }
                 }
-                
+
                 .model-container {
                     transition: transform 0.1s ease;
                 }
@@ -732,59 +941,16 @@
             }
         }
 
-        // Setup touch interactions
-        function setupInteractions() {
-            let initialDistance = 0;
-            let initialScale = 1;
-
-            arContainer.addEventListener('touchstart', (e) => {
-                e.preventDefault();
-                
-                if (e.touches.length === 1) {
-                    isDragging = true;
-                    startX = e.touches[0].clientX - currentX;
-                    startY = e.touches[0].clientY - currentY;
-                } else if (e.touches.length === 2) {
-                    const dx = e.touches[0].clientX - e.touches[1].clientX;
-                    const dy = e.touches[0].clientY - e.touches[1].clientY;
-                    initialDistance = Math.sqrt(dx * dx + dy * dy);
-                    initialScale = scale;
-                }
-            });
-
-            arContainer.addEventListener('touchmove', (e) => {
-                e.preventDefault();
-                
-                if (e.touches.length === 1 && isDragging) {
-                    currentX = e.touches[0].clientX - startX;
-                    currentY = e.touches[0].clientY - startY;
-                    updateObjectTransform();
-                } else if (e.touches.length === 2) {
-                    const dx = e.touches[0].clientX - e.touches[1].clientX;
-                    const dy = e.touches[0].clientY - e.touches[1].clientY;
-                    const distance = Math.sqrt(dx * dx + dy * dy);
-                    scale = initialScale * (distance / initialDistance);
-                    scale = Math.max(0.5, Math.min(3, scale));
-                    updateObjectTransform();
-                }
-            });
-
-            arContainer.addEventListener('touchend', () => {
-                isDragging = false;
-            });
-        }
-
-        // Update object transform
-        function updateObjectTransform() {
-            arContainer.style.transform = `translate(calc(-50% + ${currentX}px), calc(-50% + ${currentY}px)) scale(${scale})`;
-        }
-
-        // Reset object position
+        
+        
         function resetPosition() {
-            currentX = 0;
-            currentY = 0;
-            scale = 1;
-            arContainer.style.transform = 'translate(-50%, -50%)';
+            if (arObject) {
+                scene.remove(arObject);
+                arObject = null;
+            }
+            isObjectPlaced = false;
+            initialDeviceOrientation = null;
+            showPlacementHint();
         }
 
         // Take screenshot
