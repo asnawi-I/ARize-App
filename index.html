@@ -86,7 +86,7 @@
             width: 100%;
             height: 100%;
             position: relative;
-            animation: float 4s ease-in-out infinite, rotate 12s linear infinite;
+            animation: float 4s ease-in-out infinite;
             transform-style: preserve-3d;
         }
         
@@ -536,7 +536,40 @@
                 camera.srcObject = stream;
             } catch (error) {
                 console.error('Camera access denied:', error);
-                camera.style.background = 'linear-gradient(135deg, #1e3c72, #2a5298)';
+                // Show message instead of colored background
+                camera.style.display = 'none';
+                document.body.style.background = '#000';
+                
+                // Show camera access message
+                const cameraMessage = document.createElement('div');
+                cameraMessage.style.cssText = `
+                    position: fixed;
+                    top: 50%;
+                    left: 50%;
+                    transform: translate(-50%, -50%);
+                    background: rgba(0,0,0,0.9);
+                    color: white;
+                    padding: 30px;
+                    border-radius: 15px;
+                    text-align: center;
+                    z-index: 5;
+                    border: 1px solid rgba(255,255,255,0.1);
+                `;
+                cameraMessage.innerHTML = `
+                    <h3 style="margin-bottom: 15px;">Camera Access Required</h3>
+                    <p style="opacity: 0.8; margin-bottom: 20px;">
+                        To view AR objects, please allow camera access and refresh the page.
+                    </p>
+                    <button onclick="location.reload()" style="
+                        background: #007AFF;
+                        color: white;
+                        border: none;
+                        padding: 10px 20px;
+                        border-radius: 20px;
+                        cursor: pointer;
+                    ">Try Again</button>
+                `;
+                document.body.appendChild(cameraMessage);
             }
         }
 
@@ -619,7 +652,7 @@
                 overflow: hidden;
             `;
             
-            // Create layered 3D effect to simulate real model
+            // Create layered 3D effect to simulate real model (without auto-rotation)
             for (let i = 0; i < 3; i++) {
                 const layer = document.createElement('div');
                 layer.style.cssText = `
@@ -632,7 +665,6 @@
                         rgba(255,255,255,${0.1 - i * 0.03}) 100%);
                     border-radius: ${50 - i * 5}%;
                     border: 1px solid rgba(255,215,0,${0.4 - i * 0.1});
-                    animation: rotate3d ${8 + i * 2}s linear infinite;
                     transform-origin: center;
                 `;
                 modelContainer.appendChild(layer);
@@ -657,7 +689,7 @@
             
             objectContent.appendChild(modelContainer);
             
-            // Add special CSS for 3D model rotation
+            // Add special CSS for 3D model rotation (removed auto-rotation)
             const style = document.createElement('style');
             style.textContent = `
                 @keyframes rotate3d {
@@ -666,6 +698,10 @@
                     50% { transform: rotateY(180deg) rotateX(0deg); }
                     75% { transform: rotateY(270deg) rotateX(-5deg); }
                     100% { transform: rotateY(360deg) rotateX(0deg); }
+                }
+                
+                .model-container {
+                    transition: transform 0.1s ease;
                 }
             `;
             document.head.appendChild(style);
@@ -810,11 +846,8 @@
 
         // Navigation functions
         function goBack() {
-            if (window.history.length > 1) {
-                window.history.back();
-            } else {
-                window.close();
-            }
+            // Close the web app instead of going back
+            window.close();
         }
 
         // Initialize the app
