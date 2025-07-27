@@ -75,6 +75,68 @@
             transform: scale(0.95);
             background: rgba(0,0,0,0.8);
         }
+
+        /*press effects*/
+        /* Enhanced button press effects */
+.control-btn {
+    transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+    transform-origin: center;
+}
+
+.control-btn:hover {
+    background: rgba(255,255,255,0.1);
+}
+
+.control-btn:active {
+    transform: scale(0.9);
+    background: rgba(255,255,255,0.2);
+    box-shadow: inset 0 2px 8px rgba(0,0,0,0.3);
+}
+
+.control-toggle {
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.control-toggle:active {
+    transform: scale(0.92);
+    box-shadow: inset 0 2px 6px rgba(0,0,0,0.2);
+}
+
+.action-btn {
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.action-btn:active {
+    transform: scale(0.94);
+    box-shadow: inset 0 3px 8px rgba(0,0,0,0.2);
+}
+
+.placement-btn {
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.placement-btn:active {
+    transform: scale(0.96);
+    box-shadow: inset 0 3px 10px rgba(0,0,0,0.3);
+}
+
+/* Slider enhancements */
+.control-slider {
+    transition: all 0.15s ease;
+}
+
+.control-slider:active {
+    transform: scaleY(1.2);
+}
+
+.control-slider::-webkit-slider-thumb {
+    transition: all 0.15s ease;
+}
+
+.control-slider::-webkit-slider-thumb:active {
+    transform: scale(1.3);
+    box-shadow: 0 4px 12px rgba(0,123,255,0.4);
+}
         
         /* Placement UI */
         .placement-ui {
@@ -412,9 +474,9 @@
     <div class="top-controls">
         <button class="control-btn" onclick="goBack()" title="Close">×</button>
         <button class="control-btn" onclick="toggleStats()" title="Toggle Stats" id="statsToggle">ℹ</button>
-    </div>
+        <button class="control-btn" onclick="toggleControls()" title="Toggle Controls" id="controlsToggle">⚙</button>
 
-    <button class="control-btn" onclick="toggleControls()" title="Toggle Controls" id="controlsToggle">⚙</button>
+    </div>
 
     <!-- Spatial tracking status -->
     <div class="tracking-status" id="trackingStatus">Initializing tracking...</div>
@@ -497,7 +559,7 @@
         let objectRotation = { x: 0, y: 0, z: 0 };
         let manualRotationMode = true; 
         let isDragging = false;
-        let lastTouch = { x: 0, y: 0, startTime: 0, moved: false };
+        let lastTouch = { x: 0, y: 0, scale: 0, angle: undefined };
         let isScaling = false;
 
         // Initialize app
@@ -965,10 +1027,10 @@
 
         function handleTouchStart(e) {
             if (!objectPlaced) return;
-            
+
             e.preventDefault();
             isDragging = true;
-            
+
             if (e.touches.length === 1) {
         // Single touch - check if touching the object for rotation/movement
                 const touch = e.touches[0];
@@ -988,84 +1050,99 @@
             }
         }
 
-        function handleTouchMove(e) {
-            if (!objectPlaced || !isDragging) return;
-            
-            e.preventDefault();
-            
-            if (e.touches.length === 1 && !isScaling) {
-                const touch = e.touches[0];
-                const deltaX = touch.clientX - lastTouch.x;
-                const deltaY = touch.clientY - lastTouch.y;
-                const moveDistance = Math.hypot(deltaX, deltaY);
-                
-        if (moveDistance > 5) { // Threshold to determine movement vs rotation
-            lastTouch.moved = true;
-        }
+function handleTouchMove(e) {
+    if (!objectPlaced || !isDragging) return;
+    
+    e.preventDefault();
+    
+    if (e.touches.length === 1 && !isScaling) {
+        // Single touch - move object position
+        const touch = e.touches[0];
+        const deltaX = touch.clientX - lastTouch.x;
+        const deltaY = touch.clientY - lastTouch.y;
         
-        // Determine if this is a drag (move) or swipe (rotate) gesture
-        const timeDiff = Date.now() - lastTouch.startTime;
-        const isQuickSwipe = timeDiff < 500 && moveDistance > 20;
+        // Move object position
+        const moveSensitivity = 0.01;
+        objectPosition.x += deltaX * moveSensitivity;
+        objectPosition.y -= deltaY * moveSensitivity;
         
-        if (isQuickSwipe) {
-            // Rotate object based on swipe direction
-            const rotationSensitivity = 0.02;
-            objectRotation.y += deltaX * rotationSensitivity;
-            objectRotation.x += deltaY * rotationSensitivity;
-            
-            if (arObject) {
-                arObject.rotation.x = objectRotation.x;
-                arObject.rotation.y = objectRotation.y;
-                arObject.rotation.z = objectRotation.z;
-            }
-        } else if (lastTouch.moved) {
-            // Move object position
-            const moveSensitivity = 0.01;
-            objectPosition.x += deltaX * moveSensitivity;
-            objectPosition.y -= deltaY * moveSensitivity;
-            
-            if (arObject) {
-                arObject.position.set(objectPosition.x, objectPosition.y, objectPosition.z);
-            }
+        if (arObject) {
+            arObject.position.set(objectPosition.x, objectPosition.y, objectPosition.z);
         }
         
         lastTouch.x = touch.clientX;
         lastTouch.y = touch.clientY;
         
-    } else if (e.touches.length === 2 && isScaling) {
-        // Scale object with pinch gesture
+    } else if (e.touches.length === 2) {
         const touch1 = e.touches[0];
         const touch2 = e.touches[1];
+        
+        // Calculate current distance and angle
         const currentDistance = Math.hypot(
             touch2.clientX - touch1.clientX,
             touch2.clientY - touch1.clientY
-            );
+        );
         
-        const scaleChange = currentDistance / lastTouch.scale;
-        objectScale = Math.max(0.5, Math.min(3.0, objectScale * scaleChange));
+        const currentAngle = Math.atan2(
+            touch2.clientY - touch1.clientY,
+            touch2.clientX - touch1.clientX
+        );
         
-        if (arObject) {
-            arObject.scale.setScalar(objectScale);
+        if (isScaling) {
+            // Continue scaling
+            const scaleChange = currentDistance / lastTouch.scale;
+            objectScale = Math.max(0.5, Math.min(3.0, objectScale * scaleChange));
+            
+            if (arObject) {
+                arObject.scale.setScalar(objectScale);
+            }
+            
+            // Update UI with percentage
+            document.getElementById('scaleSlider').value = objectScale;
+            document.getElementById('scaleValue').textContent = Math.round(objectScale * 100) + '%';
+            
+            // Show percentage notification
+            showScaleNotification(Math.round(objectScale * 100) + '%');
+            
+            lastTouch.scale = currentDistance;
         }
         
-        // Update UI slider
-        document.getElementById('scaleSlider').value = objectScale;
-        document.getElementById('scaleValue').textContent = Math.round(objectScale * 100) + '%';
+        // Check for twist rotation
+        if (lastTouch.angle !== undefined) {
+            let angleDiff = currentAngle - lastTouch.angle;
+            
+            // Normalize angle difference to avoid jumps
+            if (angleDiff > Math.PI) angleDiff -= 2 * Math.PI;
+            if (angleDiff < -Math.PI) angleDiff += 2 * Math.PI;
+            
+            // Apply twist rotation
+            const rotationSensitivity = 1.5;
+            objectRotation.y += angleDiff * rotationSensitivity;
+            
+            if (arObject) {
+                arObject.rotation.y = objectRotation.y;
+            }
+        }
         
-        lastTouch.scale = currentDistance;
+        lastTouch.angle = currentAngle;
     }
 }
 
 function handleTouchEnd(e) {
     isDragging = false;
     isScaling = false;
-    lastTouch.moved = false;
+    lastTouch.angle = undefined;
+    
+    setTimeout(() => {
+        const notification = document.getElementById('scaleNotification');
+        if (notification) notification.remove();
+    }, 300);
 }
 
         // Mouse handlers (for desktop testing)
 function handleMouseStart(e) {
     if (!objectPlaced) return;
-    
+
     isDragging = true;
     lastTouch.x = e.clientX;
     lastTouch.y = e.clientY;
@@ -1073,18 +1150,18 @@ function handleMouseStart(e) {
 
 function handleMouseMove(e) {
     if (!objectPlaced || !isDragging) return;
-    
+
     const deltaX = e.clientX - lastTouch.x;
     const deltaY = e.clientY - lastTouch.y;
-    
+
     const moveSensitivity = 0.01;
     objectPosition.x += deltaX * moveSensitivity;
     objectPosition.y -= deltaY * moveSensitivity;
-    
+
     if (arObject) {
         arObject.position.set(objectPosition.x, objectPosition.y, objectPosition.z);
     }
-    
+
     lastTouch.x = e.clientX;
     lastTouch.y = e.clientY;
 }
@@ -1097,7 +1174,7 @@ function handleMouseEnd(e) {
 function updateObjectScale(value) {
     objectScale = parseFloat(value);
     document.getElementById('scaleValue').textContent = Math.round(objectScale * 100) + '%';
-    
+
     if (arObject) {
         arObject.scale.setScalar(objectScale);
     }
@@ -1121,13 +1198,13 @@ function toggleRotationMode() {
     const toggle = document.getElementById('rotationToggle');
     const modeText = document.getElementById('rotationMode');
     const controls = document.getElementById('manualRotationControls');
-    
+
     if (manualRotationMode) {
         toggle.classList.add('active');
         toggle.textContent = 'Manual';
         modeText.textContent = 'Manual';
         controls.style.display = 'block';
-        
+
                 // Disable auto rotation
         if (arObject && arObject.userData) {
             arObject.userData.rotationSpeed = 0;
@@ -1137,7 +1214,7 @@ function toggleRotationMode() {
         toggle.textContent = 'Auto';
         modeText.textContent = 'Auto';
         controls.style.display = 'none';
-        
+
                 // Enable auto rotation for 3D models
         if (arObject && arObject.userData && (objectData.is3d || objectData.type === '3d_model')) {
             arObject.userData.rotationSpeed = 0.005;
@@ -1148,9 +1225,9 @@ function toggleRotationMode() {
 function updateObjectRotation(axis, value) {
     const radians = (parseFloat(value) * Math.PI) / 180;
     objectRotation[axis] = radians;
-    
+
     document.getElementById(`rotation${axis.toUpperCase()}Value`).textContent = value + '°';
-    
+
     if (arObject && manualRotationMode) {
         arObject.rotation.x = objectRotation.x;
         arObject.rotation.y = objectRotation.y;
@@ -1162,14 +1239,14 @@ function updateObjectRotation(axis, value) {
 function updateTrackingStatus() {
     const statusElement = document.getElementById('trackingStatus');
     const trackingValue = document.getElementById('trackingValue');
-    
+
     if (isTracking && objectPlaced) {
         statusElement.textContent = 'Spatial tracking active';
         statusElement.classList.add('tracking-active');
         statusElement.style.display = 'block';
         trackingValue.textContent = 'Active';
         trackingValue.style.color = '#4CAF50';
-        
+
                 // Hide after 2 seconds
         setTimeout(() => {
             statusElement.classList.add('fade-out');
@@ -1178,19 +1255,19 @@ function updateTrackingStatus() {
                 statusElement.classList.remove('fade-out');
             }, 300);
         }, 2000);
-        
+
     } else if (isTracking) {
         statusElement.textContent = 'Ready to place object';
         statusElement.classList.remove('tracking-active');
         statusElement.style.display = 'block';
         trackingValue.textContent = 'Ready';
         trackingValue.style.color = '#FFD700';
-        
+
                 // Hide after 1.5 seconds
         setTimeout(() => {
             statusElement.style.display = 'none';
         }, 1500);
-        
+
     } else {
         statusElement.textContent = 'Initializing tracking...';
         statusElement.classList.remove('tracking-active');
@@ -1205,7 +1282,7 @@ function toggleStats() {
     statsVisible = !statsVisible;
     const panel = document.getElementById('statsPanel');
     const toggle = document.getElementById('statsToggle');
-    
+
     if (statsVisible) {
         panel.classList.add('visible');
         toggle.style.background = 'rgba(255,255,255,0.2)';
@@ -1221,35 +1298,34 @@ function resetPosition() {
         scene.remove(arObject);
         arObject = null;
     }
-    
+
     if (animationId) {
         cancelAnimationFrame(animationId);
         animationId = null;
     }
-    
+
     objectPlaced = false;
     initialOrientation = null;
-    
+
             // Reset controls
     objectScale = 1.0;
     objectRotation = { x: 0, y: 0, z: 0 };
     manualRotationMode = false;
     objectPosition = { x: 0, y: -1, z: -3 };
-    
-            // Reset UI
+
             // Reset UI
     document.getElementById('scaleSlider').value = 1.0;
     document.getElementById('scaleValue').textContent = '100%';
     document.getElementById('controlPanel').style.display = 'none';
     document.getElementById('controlsToggle').style.background = 'rgba(0,0,0,0.6)';
-    
+
     bottomUI.style.display = 'none';
     placementUI.style.display = 'block';
-    
+
             // Reset camera position
     threeCamera.position.set(0, 0, 0);
     threeCamera.rotation.set(0, 0, 0);
-    
+
     updateTrackingStatus();
     showNotification('Object reset - place again');
 }
@@ -1271,20 +1347,57 @@ function takeScreenshot() {
                 transition: opacity 0.1s;
     `;
     document.body.appendChild(flash);
-    
+
             // Flash animation
     flash.style.opacity = '0.7';
     setTimeout(() => {
         flash.style.opacity = '0';
         setTimeout(() => flash.remove(), 200);
     }, 100);
-    
+
             // In a real implementation, this would capture the AR scene
             // const canvas = renderer.domElement;
             // const imageData = canvas.toDataURL('image/png');
             // downloadImage(imageData);
-    
+
     showNotification('AR photo captured!');
+}
+
+
+// Show scale percentage notification
+function showScaleNotification(percentage) {
+    // Remove existing scale notification
+    const existing = document.getElementById('scaleNotification');
+    if (existing) existing.remove();
+    
+    const notification = document.createElement('div');
+    notification.id = 'scaleNotification';
+    notification.textContent = percentage;
+    notification.style.cssText = `
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        background: rgba(0,0,0,0.8);
+        color: white;
+        padding: 20px 30px;
+        border-radius: 15px;
+        z-index: 250;
+        font-size: 24px;
+        font-weight: 700;
+        backdrop-filter: blur(10px);
+        border: 2px solid rgba(255,255,255,0.2);
+        pointer-events: none;
+        opacity: 0.9;
+    `;
+    document.body.appendChild(notification);
+    
+    // Auto remove after short delay
+    setTimeout(() => {
+        if (notification.parentNode) {
+            notification.remove();
+        }
+    }, 200);
 }
 
         // Show notification
@@ -1310,7 +1423,7 @@ function showNotification(message) {
                 text-align: center;
     `;
     document.body.appendChild(notification);
-    
+
     setTimeout(() => {
         notification.style.opacity = '0';
         notification.style.transform = 'translateX(-50%) translateY(-20px)';
@@ -1321,7 +1434,7 @@ function showNotification(message) {
         // Show error message
 function showError(message) {
     loading.style.display = 'none';
-    
+
     const error = document.createElement('div');
     error.style.cssText = `
                 position: fixed;
