@@ -556,6 +556,12 @@ async function load3DModel(modelPaths) {
         try {
             console.log('Loading model from:', modelPath);
             
+            // Handle user-generated models
+            if (modelPath.includes('photo_model_') || modelPath.includes('user-models/')) {
+                console.log('User-generated model detected, using enhanced fallback');
+                return createEnhancedFallback('user_model');
+            }
+            
             const gltf = await new Promise((resolve, reject) => {
                 modelLoader.load(modelPath, resolve, undefined, reject);
             });
@@ -582,7 +588,7 @@ async function load3DModel(modelPaths) {
 }
 
 function createFallbackGeometry() {
-    // Your existing fallback code here - keep it the same
+   
     let geometry, material;
 
     if (currentObjectData.is3d || currentObjectData.type === '3d_model') {
@@ -639,6 +645,61 @@ function createFallbackGeometry() {
         mesh.receiveShadow = true;
         return mesh;
     }
+}
+
+
+function createEnhancedFallback(modelType) {
+    console.log('Creating enhanced fallback for:', modelType);
+    
+    if (modelType === 'user_model') {
+        // Special fallback for user-generated models
+        const group = new THREE.Group();
+        
+        // Main crystal-like object
+        const geometry = new THREE.OctahedronGeometry(0.8, 2);
+        const material = new THREE.MeshPhongMaterial({
+            color: 0x00FFAA,
+            shininess: 100,
+            transparent: true,
+            opacity: 0.8,
+            emissive: 0x002211
+        });
+        
+        const mainMesh = new THREE.Mesh(geometry, material);
+        
+        // Wireframe overlay
+        const wireframeGeometry = new THREE.OctahedronGeometry(0.82, 2);
+        const wireframeMaterial = new THREE.MeshBasicMaterial({
+            color: 0x00FFAA,
+            wireframe: true,
+            transparent: true,
+            opacity: 0.6
+        });
+        const wireframe = new THREE.Mesh(wireframeGeometry, wireframeMaterial);
+        
+        // Glowing core
+        const coreGeometry = new THREE.SphereGeometry(0.3, 16, 16);
+        const coreMaterial = new THREE.MeshBasicMaterial({
+            color: 0xAAFFFF,
+            transparent: true,
+            opacity: 0.7
+        });
+        const core = new THREE.Mesh(coreGeometry, coreMaterial);
+        
+        mainMesh.castShadow = true;
+        mainMesh.receiveShadow = true;
+        
+        group.add(core);
+        group.add(mainMesh);
+        group.add(wireframe);
+        group.userData = { rotationSpeed: 0.008 };
+        
+        console.log('Enhanced user model fallback created');
+        return group;
+    }
+    
+    // Default fallback
+    return createFallbackGeometry();
 }
 
 
