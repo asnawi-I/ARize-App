@@ -14,9 +14,6 @@ window.AREngine = (function() {
         'bottle': [
             'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/WaterBottle/glTF-Binary/WaterBottle.glb'
         ]
-        'box': 'models/box.glb',
-        'ball': 'models/ball.glb',
-        'cube': 'models/cube.glb'
     };
     // Private variables
     let scene, renderer, arObject, threeCamera;
@@ -86,17 +83,17 @@ window.AREngine = (function() {
     function initializeModelLoader() {
         try {
             console.log('Initializing GLTFLoader...');
-            
+
             if (typeof THREE.GLTFLoader === 'undefined') {
                 console.warn('GLTFLoader not available, using fallback');
                 modelLoader = null;
                 return Promise.resolve();
             }
-            
+
             modelLoader = new THREE.GLTFLoader();
             console.log('GLTFLoader ready');
             return Promise.resolve();
-            
+
         } catch (error) {
             console.warn('GLTFLoader failed:', error);
             modelLoader = null;
