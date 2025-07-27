@@ -3,6 +3,17 @@
 let camera, loading, trackingStatus;
 let objectData = {};
 
+function checkDependencies() {
+    const missing = [];
+    if (typeof THREE === 'undefined') missing.push('THREE.js');
+    if (typeof window.AREngine === 'undefined') missing.push('AREngine');
+    if (typeof showNotification === 'undefined') missing.push('Utils');
+    
+    if (missing.length > 0) {
+        throw new Error(`Missing: ${missing.join(', ')}`);
+    }
+}
+
 async function initApp() {
     try {
         // Get DOM elements
@@ -40,6 +51,9 @@ async function initApp() {
     } catch (error) {
         console.error('Failed to initialize AR:', error);
         showError('Failed to initialize AR experience');
+
+        checkDependencies();
+        console.log('All dependencies loaded');
     }
 }
 
@@ -123,3 +137,10 @@ if (document.readyState === 'loading') {
 } else {
     initApp();
 }
+
+window.addEventListener('load', () => {
+    if (loading && loading.style.display !== 'none') {
+        console.log('Fallback init triggered');
+        initApp();
+    }
+});
