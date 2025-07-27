@@ -414,6 +414,8 @@
         <button class="control-btn" onclick="toggleStats()" title="Toggle Stats" id="statsToggle">ℹ</button>
     </div>
 
+    <button class="control-btn" onclick="toggleControls()" title="Toggle Controls" id="controlsToggle">⚙</button>
+
     <!-- Spatial tracking status -->
     <div class="tracking-status" id="trackingStatus">Initializing tracking...</div>
 
@@ -453,48 +455,14 @@
     <!-- Clean bottom UI -->
     <div class="bottom-ui" id="bottomUI" style="display: none;">
         <!-- Interactive Controls -->
-        <div class="control-panel">
+        <div class="control-panel" id="controlPanel" style="display: none;">
             <!-- Scale Control -->
             <div class="control-row">
                 <span class="control-label">Size</span>
                 <input type="range" class="control-slider" id="scaleSlider" 
-                       min="0.5" max="3.0" step="0.1" value="1.0"
-                       onchange="updateObjectScale(this.value)">
+                min="0.5" max="3.0" step="0.1" value="1.0"
+                onchange="updateObjectScale(this.value)">
                 <span class="control-value" id="scaleValue">100%</span>
-            </div>
-            
-            <!-- Rotation Mode Toggle -->
-            <div class="control-row">
-                <span class="control-label">Rotate</span>
-                <button class="control-toggle" id="rotationToggle" onclick="toggleRotationMode()">
-                    Auto
-                </button>
-                <span class="control-value" id="rotationMode">Auto</span>
-            </div>
-            
-            <!-- Manual Rotation Controls (when enabled) -->
-            <div id="manualRotationControls" style="display: none;">
-                <div class="control-row">
-                    <span class="control-label">X</span>
-                    <input type="range" class="control-slider" id="rotationXSlider" 
-                           min="0" max="360" step="5" value="0"
-                           onchange="updateObjectRotation('x', this.value)">
-                    <span class="control-value" id="rotationXValue">0°</span>
-                </div>
-                <div class="control-row">
-                    <span class="control-label">Y</span>
-                    <input type="range" class="control-slider" id="rotationYSlider" 
-                           min="0" max="360" step="5" value="0"
-                           onchange="updateObjectRotation('y', this.value)">
-                    <span class="control-value" id="rotationYValue">0°</span>
-                </div>
-                <div class="control-row">
-                    <span class="control-label">Z</span>
-                    <input type="range" class="control-slider" id="rotationZSlider" 
-                           min="0" max="360" step="5" value="0"
-                           onchange="updateObjectRotation('z', this.value)">
-                    <span class="control-value" id="rotationZValue">0°</span>
-                </div>
             </div>
         </div>
 
@@ -527,9 +495,9 @@
         // Interactive controls
         let objectScale = 1.0;
         let objectRotation = { x: 0, y: 0, z: 0 };
-        let manualRotationMode = false;
+        let manualRotationMode = true; 
         let isDragging = false;
-        let lastTouch = { x: 0, y: 0 };
+        let lastTouch = { x: 0, y: 0, startTime: 0, moved: false };
         let isScaling = false;
 
         // Initialize app
@@ -607,7 +575,7 @@
                 window.innerWidth / window.innerHeight,
                 0.1,
                 1000
-            );
+                );
             threeCamera.position.set(0, 0, 0);
             
             // Renderer setup
@@ -883,21 +851,21 @@
             } else {
                 // Create different shapes for different object types
                 switch (objectData.type) {
-                    case 'bottle':
-                        geometry = new THREE.CylinderGeometry(0.25, 0.35, 1.2, 8);
-                        material = new THREE.MeshPhongMaterial({ color: 0x2196F3 });
-                        break;
-                    case 'box':
-                        geometry = new THREE.BoxGeometry(0.8, 0.8, 0.8);
-                        material = new THREE.MeshPhongMaterial({ color: 0xF44336 });
-                        break;
-                    case 'ball':
-                        geometry = new THREE.SphereGeometry(0.4, 16, 16);
-                        material = new THREE.MeshPhongMaterial({ color: 0x4CAF50 });
-                        break;
-                    default:
-                        geometry = new THREE.BoxGeometry(0.6, 0.6, 0.6);
-                        material = new THREE.MeshPhongMaterial({ color: 0x9C27B0 });
+                case 'bottle':
+                    geometry = new THREE.CylinderGeometry(0.25, 0.35, 1.2, 8);
+                    material = new THREE.MeshPhongMaterial({ color: 0x2196F3 });
+                    break;
+                case 'box':
+                    geometry = new THREE.BoxGeometry(0.8, 0.8, 0.8);
+                    material = new THREE.MeshPhongMaterial({ color: 0xF44336 });
+                    break;
+                case 'ball':
+                    geometry = new THREE.SphereGeometry(0.4, 16, 16);
+                    material = new THREE.MeshPhongMaterial({ color: 0x4CAF50 });
+                    break;
+                default:
+                    geometry = new THREE.BoxGeometry(0.6, 0.6, 0.6);
+                    material = new THREE.MeshPhongMaterial({ color: 0x9C27B0 });
                 }
                 
                 arObject = new THREE.Mesh(geometry, material);
@@ -1002,19 +970,21 @@
             isDragging = true;
             
             if (e.touches.length === 1) {
-                // Single touch - move object
+        // Single touch - check if touching the object for rotation/movement
                 const touch = e.touches[0];
                 lastTouch.x = touch.clientX;
                 lastTouch.y = touch.clientY;
+                lastTouch.startTime = Date.now();
+                lastTouch.moved = false;
             } else if (e.touches.length === 2) {
-                // Two finger pinch - scale object
+        // Two finger pinch - scale object
                 isScaling = true;
                 const touch1 = e.touches[0];
                 const touch2 = e.touches[1];
                 lastTouch.scale = Math.hypot(
                     touch2.clientX - touch1.clientX,
                     touch2.clientY - touch1.clientY
-                );
+                    );
             }
         }
 
@@ -1024,67 +994,32 @@
             e.preventDefault();
             
             if (e.touches.length === 1 && !isScaling) {
-                // Move object
                 const touch = e.touches[0];
                 const deltaX = touch.clientX - lastTouch.x;
                 const deltaY = touch.clientY - lastTouch.y;
+                const moveDistance = Math.hypot(deltaX, deltaY);
                 
-                // Convert screen movement to world coordinates
-                const moveSensitivity = 0.01;
-                objectPosition.x += deltaX * moveSensitivity;
-                objectPosition.y -= deltaY * moveSensitivity;
-                
-                if (arObject) {
-                    arObject.position.set(objectPosition.x, objectPosition.y, objectPosition.z);
-                }
-                
-                lastTouch.x = touch.clientX;
-                lastTouch.y = touch.clientY;
-                
-            } else if (e.touches.length === 2 && isScaling) {
-                // Scale object
-                const touch1 = e.touches[0];
-                const touch2 = e.touches[1];
-                const currentDistance = Math.hypot(
-                    touch2.clientX - touch1.clientX,
-                    touch2.clientY - touch1.clientY
-                );
-                
-                const scaleChange = currentDistance / lastTouch.scale;
-                objectScale = Math.max(0.5, Math.min(3.0, objectScale * scaleChange));
-                
-                if (arObject) {
-                    arObject.scale.setScalar(objectScale);
-                }
-                
-                // Update UI slider
-                document.getElementById('scaleSlider').value = objectScale;
-                document.getElementById('scaleValue').textContent = Math.round(objectScale * 100) + '%';
-                
-                lastTouch.scale = currentDistance;
+        if (moveDistance > 5) { // Threshold to determine movement vs rotation
+            lastTouch.moved = true;
+        }
+        
+        // Determine if this is a drag (move) or swipe (rotate) gesture
+        const timeDiff = Date.now() - lastTouch.startTime;
+        const isQuickSwipe = timeDiff < 500 && moveDistance > 20;
+        
+        if (isQuickSwipe) {
+            // Rotate object based on swipe direction
+            const rotationSensitivity = 0.02;
+            objectRotation.y += deltaX * rotationSensitivity;
+            objectRotation.x += deltaY * rotationSensitivity;
+            
+            if (arObject) {
+                arObject.rotation.x = objectRotation.x;
+                arObject.rotation.y = objectRotation.y;
+                arObject.rotation.z = objectRotation.z;
             }
-        }
-
-        function handleTouchEnd(e) {
-            isDragging = false;
-            isScaling = false;
-        }
-
-        // Mouse handlers (for desktop testing)
-        function handleMouseStart(e) {
-            if (!objectPlaced) return;
-            
-            isDragging = true;
-            lastTouch.x = e.clientX;
-            lastTouch.y = e.clientY;
-        }
-
-        function handleMouseMove(e) {
-            if (!objectPlaced || !isDragging) return;
-            
-            const deltaX = e.clientX - lastTouch.x;
-            const deltaY = e.clientY - lastTouch.y;
-            
+        } else if (lastTouch.moved) {
+            // Move object position
             const moveSensitivity = 0.01;
             objectPosition.x += deltaX * moveSensitivity;
             objectPosition.y -= deltaY * moveSensitivity;
@@ -1092,175 +1027,238 @@
             if (arObject) {
                 arObject.position.set(objectPosition.x, objectPosition.y, objectPosition.z);
             }
-            
-            lastTouch.x = e.clientX;
-            lastTouch.y = e.clientY;
         }
+        
+        lastTouch.x = touch.clientX;
+        lastTouch.y = touch.clientY;
+        
+    } else if (e.touches.length === 2 && isScaling) {
+        // Scale object with pinch gesture
+        const touch1 = e.touches[0];
+        const touch2 = e.touches[1];
+        const currentDistance = Math.hypot(
+            touch2.clientX - touch1.clientX,
+            touch2.clientY - touch1.clientY
+            );
+        
+        const scaleChange = currentDistance / lastTouch.scale;
+        objectScale = Math.max(0.5, Math.min(3.0, objectScale * scaleChange));
+        
+        if (arObject) {
+            arObject.scale.setScalar(objectScale);
+        }
+        
+        // Update UI slider
+        document.getElementById('scaleSlider').value = objectScale;
+        document.getElementById('scaleValue').textContent = Math.round(objectScale * 100) + '%';
+        
+        lastTouch.scale = currentDistance;
+    }
+}
 
-        function handleMouseEnd(e) {
-            isDragging = false;
-        }
+function handleTouchEnd(e) {
+    isDragging = false;
+    isScaling = false;
+    lastTouch.moved = false;
+}
+
+        // Mouse handlers (for desktop testing)
+function handleMouseStart(e) {
+    if (!objectPlaced) return;
+    
+    isDragging = true;
+    lastTouch.x = e.clientX;
+    lastTouch.y = e.clientY;
+}
+
+function handleMouseMove(e) {
+    if (!objectPlaced || !isDragging) return;
+    
+    const deltaX = e.clientX - lastTouch.x;
+    const deltaY = e.clientY - lastTouch.y;
+    
+    const moveSensitivity = 0.01;
+    objectPosition.x += deltaX * moveSensitivity;
+    objectPosition.y -= deltaY * moveSensitivity;
+    
+    if (arObject) {
+        arObject.position.set(objectPosition.x, objectPosition.y, objectPosition.z);
+    }
+    
+    lastTouch.x = e.clientX;
+    lastTouch.y = e.clientY;
+}
+
+function handleMouseEnd(e) {
+    isDragging = false;
+}
 
         // Interactive control functions
-        function updateObjectScale(value) {
-            objectScale = parseFloat(value);
-            document.getElementById('scaleValue').textContent = Math.round(objectScale * 100) + '%';
-            
-            if (arObject) {
-                arObject.scale.setScalar(objectScale);
-            }
-        }
+function updateObjectScale(value) {
+    objectScale = parseFloat(value);
+    document.getElementById('scaleValue').textContent = Math.round(objectScale * 100) + '%';
+    
+    if (arObject) {
+        arObject.scale.setScalar(objectScale);
+    }
+}
 
-        function toggleRotationMode() {
-            manualRotationMode = !manualRotationMode;
-            const toggle = document.getElementById('rotationToggle');
-            const modeText = document.getElementById('rotationMode');
-            const controls = document.getElementById('manualRotationControls');
-            
-            if (manualRotationMode) {
-                toggle.classList.add('active');
-                toggle.textContent = 'Manual';
-                modeText.textContent = 'Manual';
-                controls.style.display = 'block';
-                
+function toggleControls() {
+    const panel = document.getElementById('controlPanel');
+    const toggle = document.getElementById('controlsToggle');
+    
+    if (panel.style.display === 'none') {
+        panel.style.display = 'block';
+        toggle.style.background = 'rgba(255,255,255,0.2)';
+    } else {
+        panel.style.display = 'none';
+        toggle.style.background = 'rgba(0,0,0,0.6)';
+    }
+}
+
+function toggleRotationMode() {
+    manualRotationMode = !manualRotationMode;
+    const toggle = document.getElementById('rotationToggle');
+    const modeText = document.getElementById('rotationMode');
+    const controls = document.getElementById('manualRotationControls');
+    
+    if (manualRotationMode) {
+        toggle.classList.add('active');
+        toggle.textContent = 'Manual';
+        modeText.textContent = 'Manual';
+        controls.style.display = 'block';
+        
                 // Disable auto rotation
-                if (arObject && arObject.userData) {
-                    arObject.userData.rotationSpeed = 0;
-                }
-            } else {
-                toggle.classList.remove('active');
-                toggle.textContent = 'Auto';
-                modeText.textContent = 'Auto';
-                controls.style.display = 'none';
-                
+        if (arObject && arObject.userData) {
+            arObject.userData.rotationSpeed = 0;
+        }
+    } else {
+        toggle.classList.remove('active');
+        toggle.textContent = 'Auto';
+        modeText.textContent = 'Auto';
+        controls.style.display = 'none';
+        
                 // Enable auto rotation for 3D models
-                if (arObject && arObject.userData && (objectData.is3d || objectData.type === '3d_model')) {
-                    arObject.userData.rotationSpeed = 0.005;
-                }
-            }
+        if (arObject && arObject.userData && (objectData.is3d || objectData.type === '3d_model')) {
+            arObject.userData.rotationSpeed = 0.005;
         }
+    }
+}
 
-        function updateObjectRotation(axis, value) {
-            const radians = (parseFloat(value) * Math.PI) / 180;
-            objectRotation[axis] = radians;
-            
-            document.getElementById(`rotation${axis.toUpperCase()}Value`).textContent = value + '°';
-            
-            if (arObject && manualRotationMode) {
-                arObject.rotation.x = objectRotation.x;
-                arObject.rotation.y = objectRotation.y;
-                arObject.rotation.z = objectRotation.z;
-            }
-        }
+function updateObjectRotation(axis, value) {
+    const radians = (parseFloat(value) * Math.PI) / 180;
+    objectRotation[axis] = radians;
+    
+    document.getElementById(`rotation${axis.toUpperCase()}Value`).textContent = value + '°';
+    
+    if (arObject && manualRotationMode) {
+        arObject.rotation.x = objectRotation.x;
+        arObject.rotation.y = objectRotation.y;
+        arObject.rotation.z = objectRotation.z;
+    }
+}
 
         // Update tracking status (brief display)
-        function updateTrackingStatus() {
-            const statusElement = document.getElementById('trackingStatus');
-            const trackingValue = document.getElementById('trackingValue');
-            
-            if (isTracking && objectPlaced) {
-                statusElement.textContent = 'Spatial tracking active';
-                statusElement.classList.add('tracking-active');
-                statusElement.style.display = 'block';
-                trackingValue.textContent = 'Active';
-                trackingValue.style.color = '#4CAF50';
-                
+function updateTrackingStatus() {
+    const statusElement = document.getElementById('trackingStatus');
+    const trackingValue = document.getElementById('trackingValue');
+    
+    if (isTracking && objectPlaced) {
+        statusElement.textContent = 'Spatial tracking active';
+        statusElement.classList.add('tracking-active');
+        statusElement.style.display = 'block';
+        trackingValue.textContent = 'Active';
+        trackingValue.style.color = '#4CAF50';
+        
                 // Hide after 2 seconds
-                setTimeout(() => {
-                    statusElement.classList.add('fade-out');
-                    setTimeout(() => {
-                        statusElement.style.display = 'none';
-                        statusElement.classList.remove('fade-out');
-                    }, 300);
-                }, 2000);
-                
-            } else if (isTracking) {
-                statusElement.textContent = 'Ready to place object';
-                statusElement.classList.remove('tracking-active');
-                statusElement.style.display = 'block';
-                trackingValue.textContent = 'Ready';
-                trackingValue.style.color = '#FFD700';
-                
+        setTimeout(() => {
+            statusElement.classList.add('fade-out');
+            setTimeout(() => {
+                statusElement.style.display = 'none';
+                statusElement.classList.remove('fade-out');
+            }, 300);
+        }, 2000);
+        
+    } else if (isTracking) {
+        statusElement.textContent = 'Ready to place object';
+        statusElement.classList.remove('tracking-active');
+        statusElement.style.display = 'block';
+        trackingValue.textContent = 'Ready';
+        trackingValue.style.color = '#FFD700';
+        
                 // Hide after 1.5 seconds
-                setTimeout(() => {
-                    statusElement.style.display = 'none';
-                }, 1500);
-                
-            } else {
-                statusElement.textContent = 'Initializing tracking...';
-                statusElement.classList.remove('tracking-active');
-                statusElement.style.display = 'block';
-                trackingValue.textContent = 'Off';
-                trackingValue.style.color = '#F44336';
-            }
-        }
+        setTimeout(() => {
+            statusElement.style.display = 'none';
+        }, 1500);
+        
+    } else {
+        statusElement.textContent = 'Initializing tracking...';
+        statusElement.classList.remove('tracking-active');
+        statusElement.style.display = 'block';
+        trackingValue.textContent = 'Off';
+        trackingValue.style.color = '#F44336';
+    }
+}
 
         // Toggle stats panel
-        function toggleStats() {
-            statsVisible = !statsVisible;
-            const panel = document.getElementById('statsPanel');
-            const toggle = document.getElementById('statsToggle');
-            
-            if (statsVisible) {
-                panel.classList.add('visible');
-                toggle.style.background = 'rgba(255,255,255,0.2)';
-            } else {
-                panel.classList.remove('visible');
-                toggle.style.background = 'rgba(0,0,0,0.6)';
-            }
-        }
+function toggleStats() {
+    statsVisible = !statsVisible;
+    const panel = document.getElementById('statsPanel');
+    const toggle = document.getElementById('statsToggle');
+    
+    if (statsVisible) {
+        panel.classList.add('visible');
+        toggle.style.background = 'rgba(255,255,255,0.2)';
+    } else {
+        panel.classList.remove('visible');
+        toggle.style.background = 'rgba(0,0,0,0.6)';
+    }
+}
 
         // Reset object position
-        function resetPosition() {
-            if (arObject) {
-                scene.remove(arObject);
-                arObject = null;
-            }
-            
-            if (animationId) {
-                cancelAnimationFrame(animationId);
-                animationId = null;
-            }
-            
-            objectPlaced = false;
-            initialOrientation = null;
-            
+function resetPosition() {
+    if (arObject) {
+        scene.remove(arObject);
+        arObject = null;
+    }
+    
+    if (animationId) {
+        cancelAnimationFrame(animationId);
+        animationId = null;
+    }
+    
+    objectPlaced = false;
+    initialOrientation = null;
+    
             // Reset controls
-            objectScale = 1.0;
-            objectRotation = { x: 0, y: 0, z: 0 };
-            manualRotationMode = false;
-            objectPosition = { x: 0, y: -1, z: -3 };
-            
+    objectScale = 1.0;
+    objectRotation = { x: 0, y: 0, z: 0 };
+    manualRotationMode = false;
+    objectPosition = { x: 0, y: -1, z: -3 };
+    
             // Reset UI
-            document.getElementById('scaleSlider').value = 1.0;
-            document.getElementById('scaleValue').textContent = '100%';
-            document.getElementById('rotationToggle').classList.remove('active');
-            document.getElementById('rotationToggle').textContent = 'Auto';
-            document.getElementById('rotationMode').textContent = 'Auto';
-            document.getElementById('manualRotationControls').style.display = 'none';
-            document.getElementById('rotationXSlider').value = 0;
-            document.getElementById('rotationYSlider').value = 0;
-            document.getElementById('rotationZSlider').value = 0;
-            document.getElementById('rotationXValue').textContent = '0°';
-            document.getElementById('rotationYValue').textContent = '0°';
-            document.getElementById('rotationZValue').textContent = '0°';
-            
-            bottomUI.style.display = 'none';
-            placementUI.style.display = 'block';
-            
+            // Reset UI
+    document.getElementById('scaleSlider').value = 1.0;
+    document.getElementById('scaleValue').textContent = '100%';
+    document.getElementById('controlPanel').style.display = 'none';
+    document.getElementById('controlsToggle').style.background = 'rgba(0,0,0,0.6)';
+    
+    bottomUI.style.display = 'none';
+    placementUI.style.display = 'block';
+    
             // Reset camera position
-            threeCamera.position.set(0, 0, 0);
-            threeCamera.rotation.set(0, 0, 0);
-            
-            updateTrackingStatus();
-            showNotification('Object reset - place again');
-        }
+    threeCamera.position.set(0, 0, 0);
+    threeCamera.rotation.set(0, 0, 0);
+    
+    updateTrackingStatus();
+    showNotification('Object reset - place again');
+}
 
         // Take screenshot
-        function takeScreenshot() {
+function takeScreenshot() {
             // Create camera flash effect
-            const flash = document.createElement('div');
-            flash.style.cssText = `
+    const flash = document.createElement('div');
+    flash.style.cssText = `
                 position: fixed;
                 top: 0;
                 left: 0;
@@ -1271,29 +1269,29 @@
                 opacity: 0;
                 pointer-events: none;
                 transition: opacity 0.1s;
-            `;
-            document.body.appendChild(flash);
-            
+    `;
+    document.body.appendChild(flash);
+    
             // Flash animation
-            flash.style.opacity = '0.7';
-            setTimeout(() => {
-                flash.style.opacity = '0';
-                setTimeout(() => flash.remove(), 200);
-            }, 100);
-            
+    flash.style.opacity = '0.7';
+    setTimeout(() => {
+        flash.style.opacity = '0';
+        setTimeout(() => flash.remove(), 200);
+    }, 100);
+    
             // In a real implementation, this would capture the AR scene
             // const canvas = renderer.domElement;
             // const imageData = canvas.toDataURL('image/png');
             // downloadImage(imageData);
-            
-            showNotification('AR photo captured!');
-        }
+    
+    showNotification('AR photo captured!');
+}
 
         // Show notification
-        function showNotification(message) {
-            const notification = document.createElement('div');
-            notification.textContent = message;
-            notification.style.cssText = `
+function showNotification(message) {
+    const notification = document.createElement('div');
+    notification.textContent = message;
+    notification.style.cssText = `
                 position: fixed;
                 top: 120px;
                 left: 50%;
@@ -1310,22 +1308,22 @@
                 transition: all 0.3s ease;
                 max-width: 280px;
                 text-align: center;
-            `;
-            document.body.appendChild(notification);
-            
-            setTimeout(() => {
-                notification.style.opacity = '0';
-                notification.style.transform = 'translateX(-50%) translateY(-20px)';
-                setTimeout(() => notification.remove(), 300);
-            }, 2500);
-        }
+    `;
+    document.body.appendChild(notification);
+    
+    setTimeout(() => {
+        notification.style.opacity = '0';
+        notification.style.transform = 'translateX(-50%) translateY(-20px)';
+        setTimeout(() => notification.remove(), 300);
+    }, 2500);
+}
 
         // Show error message
-        function showError(message) {
-            loading.style.display = 'none';
-            
-            const error = document.createElement('div');
-            error.style.cssText = `
+function showError(message) {
+    loading.style.display = 'none';
+    
+    const error = document.createElement('div');
+    error.style.cssText = `
                 position: fixed;
                 top: 50%;
                 left: 50%;
@@ -1338,8 +1336,8 @@
                 z-index: 300;
                 border: 1px solid rgba(255,255,255,0.2);
                 max-width: 300px;
-            `;
-            error.innerHTML = `
+    `;
+    error.innerHTML = `
                 <h3 style="margin-bottom: 15px;">AR Error</h3>
                 <p style="opacity: 0.9; margin-bottom: 20px; line-height: 1.4;">
                     ${message}
@@ -1354,62 +1352,62 @@
                     font-size: 14px;
                     font-weight: 600;
                 ">Reload</button>
-            `;
-            document.body.appendChild(error);
-        }
+    `;
+    document.body.appendChild(error);
+}
 
         // Navigation
-        function goBack() {
-            if (window.history.length > 1) {
-                window.history.back();
-            } else {
-                window.close();
-            }
-        }
+function goBack() {
+    if (window.history.length > 1) {
+        window.history.back();
+    } else {
+        window.close();
+    }
+}
 
         // Handle window resize
-        window.addEventListener('resize', () => {
-            if (threeCamera && renderer) {
-                threeCamera.aspect = window.innerWidth / window.innerHeight;
-                threeCamera.updateProjectionMatrix();
-                renderer.setSize(window.innerWidth, window.innerHeight);
-            }
-        });
+window.addEventListener('resize', () => {
+    if (threeCamera && renderer) {
+        threeCamera.aspect = window.innerWidth / window.innerHeight;
+        threeCamera.updateProjectionMatrix();
+        renderer.setSize(window.innerWidth, window.innerHeight);
+    }
+});
 
         // Handle page visibility changes
-        document.addEventListener('visibilitychange', () => {
-            if (document.hidden) {
+document.addEventListener('visibilitychange', () => {
+    if (document.hidden) {
                 // Pause AR when page becomes hidden
-                if (animationId) {
-                    cancelAnimationFrame(animationId);
-                }
-            } else {
+        if (animationId) {
+            cancelAnimationFrame(animationId);
+        }
+    } else {
                 // Resume AR when page becomes visible
-                if (objectPlaced) {
-                    startRenderLoop();
-                }
-            }
-        });
+        if (objectPlaced) {
+            startRenderLoop();
+        }
+    }
+});
 
         // Cleanup on page unload
-        window.addEventListener('beforeunload', () => {
-            if (camera.srcObject) {
-                camera.srcObject.getTracks().forEach(track => track.stop());
-            }
-            if (animationId) {
-                cancelAnimationFrame(animationId);
-            }
-        });
+window.addEventListener('beforeunload', () => {
+    if (camera.srcObject) {
+        camera.srcObject.getTracks().forEach(track => track.stop());
+    }
+    if (animationId) {
+        cancelAnimationFrame(animationId);
+    }
+});
 
         // Initialize the app when page loads
-        document.addEventListener('DOMContentLoaded', initApp);
-        
+document.addEventListener('DOMContentLoaded', initApp);
+
         // Fallback initialization
-        if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', initApp);
-        } else {
-            initApp();
-        }
-    </script>
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initApp);
+} else {
+    initApp();
+}
+</script>
 </body>
 </html>
