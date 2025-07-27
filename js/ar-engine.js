@@ -494,12 +494,20 @@ function handleTouchMove(e) {
    // Public API
  return {
      init: async function(objectData) {
+        console.log('AREngine.init called with:', objectData);
         currentObjectData = objectData;
-        setupThreeJS();
-        await initializeModelLoader();
-        return setupDeviceTracking();
-    },
 
+        try {
+            setupThreeJS();
+            await initializeModelLoader();
+        await setupDeviceTracking();  
+        console.log('AREngine initialization complete');
+        return Promise.resolve();
+    } catch (error) {
+        console.error('AREngine initialization failed:', error);
+        throw error;
+    }
+},
      placeObject: function() {
          create3DObject();
          objectPlaced = true;
