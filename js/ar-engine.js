@@ -50,6 +50,15 @@ window.AREngine = (function() {
     let motionHistory = [];
     let stabilityCounter = 0;
 
+    // Enhanced tracking variables
+    let worldAnchor = null;
+    let trackingQuality = 0;
+    let motionHistory = [];
+    let stabilityCounter = 0;
+
+    let positionPredictor = { x: 0, y: 0, z: 0 };
+    let lastUpdateTime = 0;
+
     function setupThreeJS() {
         const canvas = document.getElementById('ar-canvas');
         
@@ -177,117 +186,131 @@ window.AREngine = (function() {
 
 
     function handleMotion(event) {
-        if (event.acceleration) {
-            const motion = {
+        if (event.acceleration && event.rotationRate) {
+            const now = Date.now();
+        const deltaTime = (now - lastUpdateTime) / 1000; // Convert to seconds
+        lastUpdateTime = now;
+        
+        const motion = {
+            acceleration: {
                 x: event.acceleration.x || 0,
                 y: event.acceleration.y || 0,
-                z: event.acceleration.z || 0,
-                timestamp: Date.now()
-            };
-
-        // Keep motion history for smoothing
-            motionHistory.push(motion);
-            if (motionHistory.length > 10) {
-                motionHistory.shift();
-            }
-
-            deviceMotion = motion;
-        }
-    }
-
-    function handleMotion(event) {
-        if (event.acceleration) {
-            deviceMotion.x = event.acceleration.x || 0;
-            deviceMotion.y = event.acceleration.y || 0;
-            deviceMotion.z = event.acceleration.z || 0;
-        }
-    }
-
-    function setupTouchFallback() {
-        console.log('Setting up touch-based camera control');
-        let isInteracting = false;
-        let lastTouchFallback = { x: 0, y: 0 }; 
-        let cameraRotation = { x: 0, y: 0 };
-
-        const canvas = document.getElementById('ar-canvas');
+                z: event.acceleration.z || 0
+            },
+            rotation: {
+                alpha: event.rotationRate.alpha || 0,
+                beta: event.rotationRate.beta || 0,
+                gamma: event.rotationRate.gamma || 0
+            },
+            timestamp: now
+        };
         
-        canvas.addEventListener('touchstart', (e) => {
-            if (objectPlaced) return;
-            e.preventDefault();
-            isInteracting = true;
-            const touch = e.touches[0];
-            lastTouchFallback.x = touch.clientX;
-            lastTouchFallback.y = touch.clientY;
-        });
-
-        canvas.addEventListener('touchmove', (e) => {
-            if (objectPlaced || !isInteracting) return;
-            e.preventDefault();
+        // Predict position changes based on motion
+        if (deltaTime > 0 && deltaTime < 0.1) { // Valid time delta
+            positionPredictor.x += motion.acceleration.x * deltaTime * 0.01;
+            positionPredictor.y += motion.acceleration.y * deltaTime * 0.01;
+            positionPredictor.z += motion.acceleration.z * deltaTime * 0.01;
             
-            const touch = e.touches[0];
-            const deltaX = touch.clientX - lastTouchFallback.x;
-            const deltaY = touch.clientY - lastTouchFallback.y;
-
-            cameraRotation.y += deltaX * 0.01;
-            cameraRotation.x += deltaY * 0.01;
-
-            if (objectPlaced) {
-             updateCameraPosition(cameraRotation);
-         }
-
-         lastTouchFallback.x = touch.clientX;
-         lastTouchFallback.y = touch.clientY;
-     });
-
-        canvas.addEventListener('touchend', () => {
-         isInteracting = false;
-     });
-
-        isTracking = true;
-        updateTrackingStatus();
+            // Apply damping to prevent drift
+            positionPredictor.x *= 0.95;
+            positionPredictor.y *= 0.95;
+            positionPredictor.z *= 0.95;
+        }
+        
+        motionHistory.push(motion);
+        if (motionHistory.length > 15) {
+            motionHistory.shift();
+        }
+        
+        deviceMotion = motion;
     }
+}
 
-    function setupTouchControls() {
-     const canvas = document.getElementById('ar-canvas');
+function setupTouchFallback() {
+    console.log('Setting up touch-based camera control');
+    let isInteracting = false;
+    let lastTouchFallback = { x: 0, y: 0 }; 
+    let cameraRotation = { x: 0, y: 0 };
 
-     canvas.addEventListener('touchstart', handleTouchStart, { passive: false });
-     canvas.addEventListener('touchmove', handleTouchMove, { passive: false });
-     canvas.addEventListener('touchend', handleTouchEnd, { passive: false });
+    const canvas = document.getElementById('ar-canvas');
+    
+    canvas.addEventListener('touchstart', (e) => {
+        if (objectPlaced) return;
+        e.preventDefault();
+        isInteracting = true;
+        const touch = e.touches[0];
+        lastTouchFallback.x = touch.clientX;
+        lastTouchFallback.y = touch.clientY;
+    });
 
-     canvas.addEventListener('mousedown', handleMouseStart);
-     canvas.addEventListener('mousemove', handleMouseMove);
-     canvas.addEventListener('mouseup', handleMouseEnd);
- }
+    canvas.addEventListener('touchmove', (e) => {
+        if (objectPlaced || !isInteracting) return;
+        e.preventDefault();
+        
+        const touch = e.touches[0];
+        const deltaX = touch.clientX - lastTouchFallback.x;
+        const deltaY = touch.clientY - lastTouchFallback.y;
 
- function handleTouchStart(e) {
-     if (!objectPlaced) return;
-     e.preventDefault();
-     isDragging = true;
+        cameraRotation.y += deltaX * 0.01;
+        cameraRotation.x += deltaY * 0.01;
 
-     if (e.touches.length === 1) {
-         const touch = e.touches[0];
-         lastTouch.x = touch.clientX;
-         lastTouch.y = touch.clientY;
-     } else if (e.touches.length === 2) {
-         const touch1 = e.touches[0];
-         const touch2 = e.touches[1];
+        if (objectPlaced) {
+           updateCameraPosition(cameraRotation);
+       }
 
-         isScaling = true;
-         lastTouch.scale = Math.hypot(
-             touch2.clientX - touch1.clientX,
-             touch2.clientY - touch1.clientY
-             );
+       lastTouchFallback.x = touch.clientX;
+       lastTouchFallback.y = touch.clientY;
+   });
 
-         lastTouch.centerX = (touch1.clientX + touch2.clientX) / 2;
-         lastTouch.centerY = (touch1.clientY + touch2.clientY) / 2;
-         lastTouch.angle = Math.atan2(
-             touch2.clientY - touch1.clientY,
-             touch2.clientX - touch1.clientX
-             );
-     }
- }
+    canvas.addEventListener('touchend', () => {
+       isInteracting = false;
+   });
 
- function handleTouchMove(e) {
+    isTracking = true;
+    updateTrackingStatus();
+}
+
+function setupTouchControls() {
+   const canvas = document.getElementById('ar-canvas');
+
+   canvas.addEventListener('touchstart', handleTouchStart, { passive: false });
+   canvas.addEventListener('touchmove', handleTouchMove, { passive: false });
+   canvas.addEventListener('touchend', handleTouchEnd, { passive: false });
+
+   canvas.addEventListener('mousedown', handleMouseStart);
+   canvas.addEventListener('mousemove', handleMouseMove);
+   canvas.addEventListener('mouseup', handleMouseEnd);
+}
+
+function handleTouchStart(e) {
+   if (!objectPlaced) return;
+   e.preventDefault();
+   isDragging = true;
+
+   if (e.touches.length === 1) {
+       const touch = e.touches[0];
+       lastTouch.x = touch.clientX;
+       lastTouch.y = touch.clientY;
+   } else if (e.touches.length === 2) {
+       const touch1 = e.touches[0];
+       const touch2 = e.touches[1];
+
+       isScaling = true;
+       lastTouch.scale = Math.hypot(
+           touch2.clientX - touch1.clientX,
+           touch2.clientY - touch1.clientY
+           );
+
+       lastTouch.centerX = (touch1.clientX + touch2.clientX) / 2;
+       lastTouch.centerY = (touch1.clientY + touch2.clientY) / 2;
+       lastTouch.angle = Math.atan2(
+           touch2.clientY - touch1.clientY,
+           touch2.clientX - touch1.clientX
+           );
+   }
+}
+
+function handleTouchMove(e) {
     if (!objectPlaced || !isDragging) return;
     e.preventDefault();
     
@@ -373,45 +396,45 @@ window.AREngine = (function() {
 }
 
 function handleTouchEnd(e) {
- isDragging = false;
- isScaling = false;
- lastTouch.angle = undefined;
- lastTouch.centerX = undefined;
- lastTouch.centerY = undefined;
+   isDragging = false;
+   isScaling = false;
+   lastTouch.angle = undefined;
+   lastTouch.centerX = undefined;
+   lastTouch.centerY = undefined;
 
- setTimeout(() => {
-     const notification = document.getElementById('scaleNotification');
-     if (notification) notification.remove();
- }, 300);
+   setTimeout(() => {
+       const notification = document.getElementById('scaleNotification');
+       if (notification) notification.remove();
+   }, 300);
 }
 
 function handleMouseStart(e) {
- if (!objectPlaced) return;
- isDragging = true;
- lastTouch.x = e.clientX;
- lastTouch.y = e.clientY;
+   if (!objectPlaced) return;
+   isDragging = true;
+   lastTouch.x = e.clientX;
+   lastTouch.y = e.clientY;
 }
 
 function handleMouseMove(e) {
- if (!objectPlaced || !isDragging) return;
+   if (!objectPlaced || !isDragging) return;
 
- const deltaX = e.clientX - lastTouch.x;
- const deltaY = e.clientY - lastTouch.y;
+   const deltaX = e.clientX - lastTouch.x;
+   const deltaY = e.clientY - lastTouch.y;
 
- const moveSensitivity = 0.01;
- objectPosition.x += deltaX * moveSensitivity;
- objectPosition.y -= deltaY * moveSensitivity;
+   const moveSensitivity = 0.01;
+   objectPosition.x += deltaX * moveSensitivity;
+   objectPosition.y -= deltaY * moveSensitivity;
 
- if (arObject) {
-     arObject.position.set(objectPosition.x, objectPosition.y, objectPosition.z);
- }
+   if (arObject) {
+       arObject.position.set(objectPosition.x, objectPosition.y, objectPosition.z);
+   }
 
- lastTouch.x = e.clientX;
- lastTouch.y = e.clientY;
+   lastTouch.x = e.clientX;
+   lastTouch.y = e.clientY;
 }
 
 function handleMouseEnd(e) {
- isDragging = false;
+   isDragging = false;
 }
 
 async function create3DObject() {
@@ -549,22 +572,22 @@ function createFallbackGeometry() {
 
 
 function startRenderLoop() {
- function animate() {
-     if (!objectPlaced) return;
+   function animate() {
+       if (!objectPlaced) return;
 
-     animationId = requestAnimationFrame(animate);
+       animationId = requestAnimationFrame(animate);
 
-     if (!manualRotationMode) {
-         updateCameraFromOrientation();
-     }
+       if (!manualRotationMode) {
+           updateCameraFromOrientation();
+       }
 
-     if (arObject && arObject.userData && arObject.userData.rotationSpeed && !manualRotationMode) {
-         arObject.rotation.y += arObject.userData.rotationSpeed;
-     }
+       if (arObject && arObject.userData && arObject.userData.rotationSpeed && !manualRotationMode) {
+           arObject.rotation.y += arObject.userData.rotationSpeed;
+       }
 
-     renderer.render(scene, threeCamera);
- }
- animate();
+       renderer.render(scene, threeCamera);
+   }
+   animate();
 }
 
 function updateCameraFromOrientation() {
@@ -579,10 +602,10 @@ function updateCameraFromOrientation() {
     const stabilityFactor = Math.min(1.0, trackingQuality / 100);
     const radius = baseRadius * (0.8 + 0.2 * stabilityFactor);
 
-    // Smoother position calculation
-    const targetX = worldAnchor.position.x + radius * Math.sin(alphaDiff) * Math.cos(betaDiff);
-    const targetZ = worldAnchor.position.z + radius * Math.cos(alphaDiff) * Math.cos(betaDiff);
-    const targetY = worldAnchor.position.y + radius * Math.sin(betaDiff);
+    // Enhanced position with motion prediction
+    const targetX = worldAnchor.position.x + radius * Math.sin(alphaDiff) * Math.cos(betaDiff) - positionPredictor.x;
+    const targetZ = worldAnchor.position.z + radius * Math.cos(alphaDiff) * Math.cos(betaDiff) - positionPredictor.z;
+    const targetY = worldAnchor.position.y + radius * Math.sin(betaDiff) - positionPredictor.y;
 
     // Smooth camera movement (lerp)
     const lerpFactor = 0.1;
@@ -592,66 +615,66 @@ function updateCameraFromOrientation() {
         currentPos.x + (targetX - currentPos.x) * lerpFactor,
         currentPos.y + (targetY - currentPos.y) * lerpFactor,
         currentPos.z + (targetZ - currentPos.z) * lerpFactor
-    );
+        );
 
     threeCamera.lookAt(worldAnchor.position.x, worldAnchor.position.y, worldAnchor.position.z);
     threeCamera.rotation.z = gammaDiff * 0.3; // Reduced rotation sensitivity
 }
 
 function updateCameraPosition(rotation) {
- if (!objectPlaced) return;
+   if (!objectPlaced) return;
 
- const radius = 4;
- const x = objectPosition.x + radius * Math.sin(rotation.y) * Math.cos(rotation.x);
- const z = objectPosition.z + radius * Math.cos(rotation.y) * Math.cos(rotation.x);
- const y = objectPosition.y + radius * Math.sin(rotation.x);
+   const radius = 4;
+   const x = objectPosition.x + radius * Math.sin(rotation.y) * Math.cos(rotation.x);
+   const z = objectPosition.z + radius * Math.cos(rotation.y) * Math.cos(rotation.x);
+   const y = objectPosition.y + radius * Math.sin(rotation.x);
 
- threeCamera.position.set(x, y, z);
- threeCamera.lookAt(objectPosition.x, objectPosition.y, objectPosition.z);
+   threeCamera.position.set(x, y, z);
+   threeCamera.lookAt(objectPosition.x, objectPosition.y, objectPosition.z);
 }
 
 function updateTrackingStatus() {
- const statusElement = document.getElementById('trackingStatus');
- const trackingValue = document.getElementById('trackingValue');
+   const statusElement = document.getElementById('trackingStatus');
+   const trackingValue = document.getElementById('trackingValue');
 
- if (isTracking && objectPlaced) {
-     statusElement.textContent = 'Spatial tracking active';
-     statusElement.classList.add('tracking-active');
-     statusElement.style.display = 'block';
-     trackingValue.textContent = 'Active';
-     trackingValue.style.color = '#4CAF50';
+   if (isTracking && objectPlaced) {
+       statusElement.textContent = 'Spatial tracking active';
+       statusElement.classList.add('tracking-active');
+       statusElement.style.display = 'block';
+       trackingValue.textContent = 'Active';
+       trackingValue.style.color = '#4CAF50';
 
-     setTimeout(() => {
-         statusElement.classList.add('fade-out');
-         setTimeout(() => {
-             statusElement.style.display = 'none';
-             statusElement.classList.remove('fade-out');
-         }, 300);
-     }, 2000);
+       setTimeout(() => {
+           statusElement.classList.add('fade-out');
+           setTimeout(() => {
+               statusElement.style.display = 'none';
+               statusElement.classList.remove('fade-out');
+           }, 300);
+       }, 2000);
 
- } else if (isTracking) {
-     statusElement.textContent = 'Ready to place object';
-     statusElement.classList.remove('tracking-active');
-     statusElement.style.display = 'block';
-     trackingValue.textContent = 'Ready';
-     trackingValue.style.color = '#FFD700';
+   } else if (isTracking) {
+       statusElement.textContent = 'Ready to place object';
+       statusElement.classList.remove('tracking-active');
+       statusElement.style.display = 'block';
+       trackingValue.textContent = 'Ready';
+       trackingValue.style.color = '#FFD700';
 
-     setTimeout(() => {
-         statusElement.style.display = 'none';
-     }, 1500);
+       setTimeout(() => {
+           statusElement.style.display = 'none';
+       }, 1500);
 
- } else {
-     statusElement.textContent = 'Initializing tracking...';
-     statusElement.classList.remove('tracking-active');
-     statusElement.style.display = 'block';
-     trackingValue.textContent = 'Off';
-     trackingValue.style.color = '#F44336';
- }
+   } else {
+       statusElement.textContent = 'Initializing tracking...';
+       statusElement.classList.remove('tracking-active');
+       statusElement.style.display = 'block';
+       trackingValue.textContent = 'Off';
+       trackingValue.style.color = '#F44336';
+   }
 }
 
    // Public API
 return {
- init: async function(objectData) {
+   init: async function(objectData) {
     currentObjectData = objectData;
     setupThreeJS();
     await initializeModelLoader();
@@ -659,53 +682,53 @@ return {
 },
 
 placeObject: async function() {
- create3DObject();
- objectPlaced = true;
- initialOrientation = { ...deviceOrientation };
- startRenderLoop();
- updateTrackingStatus();
+   create3DObject();
+   objectPlaced = true;
+   initialOrientation = { ...deviceOrientation };
+   startRenderLoop();
+   updateTrackingStatus();
 },
 
 updateScale: function(scale) {
- objectScale = scale;
- if (arObject) {
-     arObject.scale.setScalar(objectScale);
- }
+   objectScale = scale;
+   if (arObject) {
+       arObject.scale.setScalar(objectScale);
+   }
 },
 
 resetObject: function() {
- if (arObject) {
-     scene.remove(arObject);
-     arObject = null;
- }
+   if (arObject) {
+       scene.remove(arObject);
+       arObject = null;
+   }
 
- if (animationId) {
-     cancelAnimationFrame(animationId);
-     animationId = null;
- }
+   if (animationId) {
+       cancelAnimationFrame(animationId);
+       animationId = null;
+   }
 
- objectPlaced = false;
- worldAnchor = null;
- trackingQuality = 0;
- stabilityCounter = 0;
- motionHistory = [];
- initialOrientation = null;
- objectScale = 1.0;
- objectRotation = { x: 0, y: 0, z: 0 };
- objectPosition = { x: 0, y: -1, z: -3 };
+   objectPlaced = false;
+   worldAnchor = null;
+   trackingQuality = 0;
+   stabilityCounter = 0;
+   motionHistory = [];
+   initialOrientation = null;
+   objectScale = 1.0;
+   objectRotation = { x: 0, y: 0, z: 0 };
+   objectPosition = { x: 0, y: -1, z: -3 };
 
- threeCamera.position.set(0, 0, 0);
- threeCamera.rotation.set(0, 0, 0);
+   threeCamera.position.set(0, 0, 0);
+   threeCamera.rotation.set(0, 0, 0);
 
- updateTrackingStatus();
+   updateTrackingStatus();
 },
 
 handleResize: function() {
- if (threeCamera && renderer) {
-     threeCamera.aspect = window.innerWidth / window.innerHeight;
-     threeCamera.updateProjectionMatrix();
-     renderer.setSize(window.innerWidth, window.innerHeight);
- }
+   if (threeCamera && renderer) {
+       threeCamera.aspect = window.innerWidth / window.innerHeight;
+       threeCamera.updateProjectionMatrix();
+       renderer.setSize(window.innerWidth, window.innerHeight);
+   }
 }
 };
 })();
