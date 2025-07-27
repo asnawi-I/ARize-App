@@ -14,7 +14,7 @@ window.AREngine = (function() {
         'bottle': [
             'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/WaterBottle/glTF-Binary/WaterBottle.glb'
         ],
-        
+
         'brain_stem': ['models/BrainStem.glb'],
         'helmet': ['models/DamagedHelmet.glb'], 
         'mosquito': ['models/MosquitoInAmber.glb']
@@ -45,6 +45,10 @@ window.AREngine = (function() {
 
     // Current object data
     let currentObjectData = {};
+    let worldAnchor = null;
+    let trackingQuality = 0;
+    let motionHistory = [];
+    let stabilityCounter = 0;
 
     function setupThreeJS() {
         const canvas = document.getElementById('ar-canvas');
@@ -138,12 +142,56 @@ window.AREngine = (function() {
     }
 
     function handleOrientation(event) {
-        deviceOrientation.alpha = event.alpha || 0;
-        deviceOrientation.beta = event.beta || 0;
-        deviceOrientation.gamma = event.gamma || 0;
-        
-        if (!initialOrientation && objectPlaced) {
-            initialOrientation = { ...deviceOrientation };
+        const newOrientation = {
+            alpha: event.alpha || 0,
+            beta: event.beta || 0,
+            gamma: event.gamma || 0
+        };
+
+    // Calculate tracking stability
+        if (deviceOrientation.alpha !== 0 || deviceOrientation.beta !== 0) {
+            const alphaDiff = Math.abs(newOrientation.alpha - deviceOrientation.alpha);
+            const betaDiff = Math.abs(newOrientation.beta - deviceOrientation.beta);
+
+            if (alphaDiff < 2 && betaDiff < 2) {
+                stabilityCounter++;
+                trackingQuality = Math.min(100, trackingQuality + 5);
+            } else {
+                stabilityCounter = 0;
+                trackingQuality = Math.max(0, trackingQuality - 2);
+            }
+        }
+
+        deviceOrientation = newOrientation;
+
+    // Create world anchor when object is first placed and tracking is stable
+        if (!worldAnchor && objectPlaced && trackingQuality > 50) {
+            worldAnchor = {
+                orientation: { ...deviceOrientation },
+                position: { ...objectPosition },
+                timestamp: Date.now()
+            };
+            console.log('World anchor created with quality:', trackingQuality);
+        }
+    }
+
+
+    function handleMotion(event) {
+        if (event.acceleration) {
+            const motion = {
+                x: event.acceleration.x || 0,
+                y: event.acceleration.y || 0,
+                z: event.acceleration.z || 0,
+                timestamp: Date.now()
+            };
+
+        // Keep motion history for smoothing
+            motionHistory.push(motion);
+            if (motionHistory.length > 10) {
+                motionHistory.shift();
+            }
+
+            deviceMotion = motion;
         }
     }
 
@@ -520,22 +568,34 @@ function startRenderLoop() {
 }
 
 function updateCameraFromOrientation() {
- if (!initialOrientation || !isTracking) return;
+    if (!worldAnchor || !isTracking || !objectPlaced) return;
 
- const alphaDiff = (deviceOrientation.alpha - initialOrientation.alpha) * Math.PI / 180;
- const betaDiff = (deviceOrientation.beta - initialOrientation.beta) * Math.PI / 180;
- const gammaDiff = (deviceOrientation.gamma - initialOrientation.gamma) * Math.PI / 180;
+    const alphaDiff = (deviceOrientation.alpha - worldAnchor.orientation.alpha) * Math.PI / 180;
+    const betaDiff = (deviceOrientation.beta - worldAnchor.orientation.beta) * Math.PI / 180;
+    const gammaDiff = (deviceOrientation.gamma - worldAnchor.orientation.gamma) * Math.PI / 180;
 
- const radius = 4;
+    // Enhanced radius calculation with stability
+    const baseRadius = 4;
+    const stabilityFactor = Math.min(1.0, trackingQuality / 100);
+    const radius = baseRadius * (0.8 + 0.2 * stabilityFactor);
 
- const x = objectPosition.x + radius * Math.sin(alphaDiff) * Math.cos(betaDiff);
- const z = objectPosition.z + radius * Math.cos(alphaDiff) * Math.cos(betaDiff);
- const y = objectPosition.y + radius * Math.sin(betaDiff);
+    // Smoother position calculation
+    const targetX = worldAnchor.position.x + radius * Math.sin(alphaDiff) * Math.cos(betaDiff);
+    const targetZ = worldAnchor.position.z + radius * Math.cos(alphaDiff) * Math.cos(betaDiff);
+    const targetY = worldAnchor.position.y + radius * Math.sin(betaDiff);
 
- threeCamera.position.set(x, y, z);
- threeCamera.lookAt(objectPosition.x, objectPosition.y, objectPosition.z);
+    // Smooth camera movement (lerp)
+    const lerpFactor = 0.1;
+    const currentPos = threeCamera.position;
+    
+    threeCamera.position.set(
+        currentPos.x + (targetX - currentPos.x) * lerpFactor,
+        currentPos.y + (targetY - currentPos.y) * lerpFactor,
+        currentPos.z + (targetZ - currentPos.z) * lerpFactor
+    );
 
- threeCamera.rotation.z = gammaDiff * 0.5;
+    threeCamera.lookAt(worldAnchor.position.x, worldAnchor.position.y, worldAnchor.position.z);
+    threeCamera.rotation.z = gammaDiff * 0.3; // Reduced rotation sensitivity
 }
 
 function updateCameraPosition(rotation) {
@@ -625,6 +685,10 @@ resetObject: function() {
  }
 
  objectPlaced = false;
+ worldAnchor = null;
+ trackingQuality = 0;
+ stabilityCounter = 0;
+ motionHistory = [];
  initialOrientation = null;
  objectScale = 1.0;
  objectRotation = { x: 0, y: 0, z: 0 };
