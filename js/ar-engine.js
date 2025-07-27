@@ -7,8 +7,13 @@ window.AREngine = (function() {
     let loadingProgress = 0;
     let isModelLoading = false;
     const modelLibrary = {
-        '3d_model': 'models/default-scan.glb',
-        'bottle': 'models/bottle.glb',
+        '3d_model': [
+            'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/Duck/glTF-Binary/Duck.glb',
+            'https://threejs.org/examples/models/gltf/DamagedHelmet/glTF/DamagedHelmet.gltf'
+        ],
+        'bottle': [
+            'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/WaterBottle/glTF-Binary/WaterBottle.glb'
+        ]
         'box': 'models/box.glb',
         'ball': 'models/ball.glb',
         'cube': 'models/cube.glb'
@@ -79,47 +84,23 @@ window.AREngine = (function() {
 
 
     function initializeModelLoader() {
-    // For now, we'll skip 3D model loading and use fallback geometry
-        console.log('Using fallback geometry (GLTFLoader temporarily disabled)');
-        modelLoader = null;
-    }
-
-    async function setupDeviceTracking() {
         try {
-            if (typeof DeviceOrientationEvent.requestPermission === 'function') {
-                const permission = await DeviceOrientationEvent.requestPermission();
-                if (permission !== 'granted') {
-                    throw new Error('Device orientation permission denied');
-                }
-            }
-
-            window.addEventListener('deviceorientation', handleOrientation, true);
+            console.log('Initializing GLTFLoader...');
             
-            if (typeof DeviceMotionEvent.requestPermission === 'function') {
-                const motionPermission = await DeviceMotionEvent.requestPermission();
-                if (motionPermission === 'granted') {
-                    window.addEventListener('devicemotion', handleMotion, true);
-                }
-            } else {
-                window.addEventListener('devicemotion', handleMotion, true);
+            if (typeof THREE.GLTFLoader === 'undefined') {
+                console.warn('GLTFLoader not available, using fallback');
+                modelLoader = null;
+                return Promise.resolve();
             }
-
-            setupTouchControls();
-
-            setTimeout(() => {
-                if (deviceOrientation.alpha === 0 && deviceOrientation.beta === 0) {
-                    console.warn('Device orientation not working, using fallback');
-                    setupTouchFallback();
-                } else {
-                    isTracking = true;
-                    updateTrackingStatus();
-                    console.log('Device tracking active');
-                }
-            }, 500);
-
+            
+            modelLoader = new THREE.GLTFLoader();
+            console.log('GLTFLoader ready');
+            return Promise.resolve();
+            
         } catch (error) {
-            console.error('Device tracking setup failed:', error);
-            setupTouchFallback();
+            console.warn('GLTFLoader failed:', error);
+            modelLoader = null;
+            return Promise.resolve();
         }
     }
 
