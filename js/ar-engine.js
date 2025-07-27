@@ -493,10 +493,10 @@ function handleTouchMove(e) {
 
    // Public API
  return {
-     init: function(objectData) {
+     init: async function(objectData) {
         currentObjectData = objectData;
         setupThreeJS();
-        initializeModelLoader();
+        await initializeModelLoader();
         return setupDeviceTracking();
     },
 
