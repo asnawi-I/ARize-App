@@ -1,6 +1,18 @@
 // AR Engine - Three.js and spatial tracking
 
 window.AREngine = (function() {
+
+    // Model loading variables
+    let modelLoader = null;
+    let loadingProgress = 0;
+    let isModelLoading = false;
+    const modelLibrary = {
+        '3d_model': 'models/default-scan.glb',
+        'bottle': 'models/bottle.glb',
+        'box': 'models/box.glb',
+        'ball': 'models/ball.glb',
+        'cube': 'models/cube.glb'
+    };
     // Private variables
     let scene, renderer, arObject, threeCamera;
     let deviceOrientation = { alpha: 0, beta: 0, gamma: 0 };
@@ -63,6 +75,16 @@ window.AREngine = (function() {
         scene.add(directionalLight);
         
         console.log('Three.js setup complete');
+    }
+    
+
+    function initializeModelLoader() {
+        if (window.GLTFLoader) {
+            modelLoader = new window.GLTFLoader();
+            console.log('GLTF Loader initialized');
+        } else {
+            console.warn('GLTF Loader not available, using fallback geometry');
+        }
     }
 
     async function setupDeviceTracking() {
@@ -147,14 +169,14 @@ window.AREngine = (function() {
             const deltaX = touch.client
             const deltaX = touch.clientX - lastTouchFallback.x;
             const deltaY = touch.clientY - lastTouchFallback.y;
-            
+
             cameraRotation.y += deltaX * 0.01;
             cameraRotation.x += deltaY * 0.01;
-            
+
             if (objectPlaced) {
              updateCameraPosition(cameraRotation);
          }
-         
+
          lastTouchFallback.x = touch.clientX;
          lastTouchFallback.y = touch.clientY;
      });
@@ -169,11 +191,11 @@ window.AREngine = (function() {
 
     function setupTouchControls() {
      const canvas = document.getElementById('ar-canvas');
-     
+
      canvas.addEventListener('touchstart', handleTouchStart, { passive: false });
      canvas.addEventListener('touchmove', handleTouchMove, { passive: false });
      canvas.addEventListener('touchend', handleTouchEnd, { passive: false });
-     
+
      canvas.addEventListener('mousedown', handleMouseStart);
      canvas.addEventListener('mousemove', handleMouseMove);
      canvas.addEventListener('mouseup', handleMouseEnd);
@@ -210,83 +232,83 @@ window.AREngine = (function() {
  function handleTouchMove(e) {
      if (!objectPlaced || !isDragging) return;
      e.preventDefault();
-     
+
      if (e.touches.length === 1 && !isScaling) {
          const touch = e.touches[0];
          const deltaX = touch.clientX - lastTouch.x;
          const deltaY = touch.clientY - lastTouch.y;
-         
+
          const moveSensitivity = 0.01;
          objectPosition.x += deltaX * moveSensitivity;
          objectPosition.y -= deltaY * moveSensitivity;
-         
+
          if (arObject) {
              arObject.position.set(objectPosition.x, objectPosition.y, objectPosition.z);
          }
-         
+
          lastTouch.x = touch.clientX;
          lastTouch.y = touch.clientY;
-         
+
      } else if (e.touches.length === 2) {
          const touch1 = e.touches[0];
          const touch2 = e.touches[1];
-         
+
          const currentDistance = Math.hypot(
              touch2.clientX - touch1.clientX,
              touch2.clientY - touch1.clientY
              );
-         
+
          const centerX = (touch1.clientX + touch2.clientX) / 2;
          const centerY = (touch1.clientY + touch2.clientY) / 2;
-         
+
          if (isScaling) {
              const scaleChange = currentDistance / lastTouch.scale;
              objectScale = Math.max(0.5, Math.min(3.0, objectScale * scaleChange));
-             
+
              if (arObject) {
                  arObject.scale.setScalar(objectScale);
              }
-             
+
              document.getElementById('scaleSlider').value = objectScale;
              document.getElementById('scaleValue').textContent = Math.round(objectScale * 100) + '%';
-             
+
              showScaleNotification(Math.round(objectScale * 100) + '%');
-             
+
              lastTouch.scale = currentDistance;
          }
-         
+
          if (lastTouch.centerX !== undefined && lastTouch.centerY !== undefined) {
              const centerDeltaX = centerX - lastTouch.centerX;
              const centerDeltaY = centerY - lastTouch.centerY;
-             
+
              const rotationSensitivity = 0.02;
-             
+
              objectRotation.y += centerDeltaX * rotationSensitivity;
              objectRotation.x += centerDeltaY * rotationSensitivity;
-             
+
              const currentAngle = Math.atan2(
                  touch2.clientY - touch1.clientY,
                  touch2.clientX - touch1.clientX
                  );
-             
+
              if (lastTouch.angle !== undefined) {
                  let angleDiff = currentAngle - lastTouch.angle;
-                 
+
                  if (angleDiff > Math.PI) angleDiff -= 2 * Math.PI;
                  if (angleDiff < -Math.PI) angleDiff += 2 * Math.PI;
-                 
+
                  objectRotation.z += angleDiff * 0.8;
              }
-             
+
              lastTouch.angle = currentAngle;
-             
+
              if (arObject) {
                  arObject.rotation.x = objectRotation.x;
                  arObject.rotation.y = objectRotation.y;
                  arObject.rotation.z = objectRotation.z;
              }
          }
-         
+
          lastTouch.centerX = centerX;
          lastTouch.centerY = centerY;
      }
@@ -298,7 +320,7 @@ window.AREngine = (function() {
      lastTouch.angle = undefined;
      lastTouch.centerX = undefined;
      lastTouch.centerY = undefined;
-     
+
      setTimeout(() => {
          const notification = document.getElementById('scaleNotification');
          if (notification) notification.remove();
@@ -314,18 +336,18 @@ window.AREngine = (function() {
 
  function handleMouseMove(e) {
      if (!objectPlaced || !isDragging) return;
-     
+
      const deltaX = e.clientX - lastTouch.x;
      const deltaY = e.clientY - lastTouch.y;
-     
+
      const moveSensitivity = 0.01;
      objectPosition.x += deltaX * moveSensitivity;
      objectPosition.y -= deltaY * moveSensitivity;
-     
+
      if (arObject) {
          arObject.position.set(objectPosition.x, objectPosition.y, objectPosition.z);
      }
-     
+
      lastTouch.x = e.clientX;
      lastTouch.y = e.clientY;
  }
@@ -361,10 +383,10 @@ window.AREngine = (function() {
          arObject = new THREE.Group();
          const mainMesh = new THREE.Mesh(geometry, material);
          const wireframe = new THREE.Mesh(wireframeGeometry, wireframeMaterial);
-         
+
          mainMesh.castShadow = true;
          mainMesh.receiveShadow = true;
-         
+
          arObject.add(mainMesh);
          arObject.add(wireframe);
          arObject.userData = { rotationSpeed: 0.005 };
@@ -387,7 +409,7 @@ window.AREngine = (function() {
              geometry = new THREE.BoxGeometry(0.6, 0.6, 0.6);
              material = new THREE.MeshPhongMaterial({ color: 0x9C27B0 });
          }
-         
+
          arObject = new THREE.Mesh(geometry, material);
          arObject.castShadow = true;
          arObject.receiveShadow = true;
@@ -395,13 +417,13 @@ window.AREngine = (function() {
 
      arObject.position.set(objectPosition.x, objectPosition.y, objectPosition.z);
      arObject.scale.setScalar(objectScale);
-     
+
      if (manualRotationMode) {
          arObject.rotation.x = objectRotation.x;
          arObject.rotation.y = objectRotation.y;
          arObject.rotation.z = objectRotation.z;
      }
-     
+
      scene.add(arObject);
      console.log('3D object created at:', objectPosition);
  }
@@ -409,17 +431,17 @@ window.AREngine = (function() {
  function startRenderLoop() {
      function animate() {
          if (!objectPlaced) return;
-         
+
          animationId = requestAnimationFrame(animate);
-         
+
          if (!manualRotationMode) {
              updateCameraFromOrientation();
          }
-         
+
          if (arObject && arObject.userData && arObject.userData.rotationSpeed && !manualRotationMode) {
              arObject.rotation.y += arObject.userData.rotationSpeed;
          }
-         
+
          renderer.render(scene, threeCamera);
      }
      animate();
@@ -433,25 +455,25 @@ window.AREngine = (function() {
      const gammaDiff = (deviceOrientation.gamma - initialOrientation.gamma) * Math.PI / 180;
 
      const radius = 4;
-     
+
      const x = objectPosition.x + radius * Math.sin(alphaDiff) * Math.cos(betaDiff);
      const z = objectPosition.z + radius * Math.cos(alphaDiff) * Math.cos(betaDiff);
      const y = objectPosition.y + radius * Math.sin(betaDiff);
-     
+
      threeCamera.position.set(x, y, z);
      threeCamera.lookAt(objectPosition.x, objectPosition.y, objectPosition.z);
-     
+
      threeCamera.rotation.z = gammaDiff * 0.5;
  }
 
  function updateCameraPosition(rotation) {
      if (!objectPlaced) return;
-     
+
      const radius = 4;
      const x = objectPosition.x + radius * Math.sin(rotation.y) * Math.cos(rotation.x);
      const z = objectPosition.z + radius * Math.cos(rotation.y) * Math.cos(rotation.x);
      const y = objectPosition.y + radius * Math.sin(rotation.x);
-     
+
      threeCamera.position.set(x, y, z);
      threeCamera.lookAt(objectPosition.x, objectPosition.y, objectPosition.z);
  }
@@ -459,14 +481,14 @@ window.AREngine = (function() {
  function updateTrackingStatus() {
      const statusElement = document.getElementById('trackingStatus');
      const trackingValue = document.getElementById('trackingValue');
-     
+
      if (isTracking && objectPlaced) {
          statusElement.textContent = 'Spatial tracking active';
          statusElement.classList.add('tracking-active');
          statusElement.style.display = 'block';
          trackingValue.textContent = 'Active';
          trackingValue.style.color = '#4CAF50';
-         
+
          setTimeout(() => {
              statusElement.classList.add('fade-out');
              setTimeout(() => {
@@ -474,18 +496,18 @@ window.AREngine = (function() {
                  statusElement.classList.remove('fade-out');
              }, 300);
          }, 2000);
-         
+
      } else if (isTracking) {
          statusElement.textContent = 'Ready to place object';
          statusElement.classList.remove('tracking-active');
          statusElement.style.display = 'block';
          trackingValue.textContent = 'Ready';
          trackingValue.style.color = '#FFD700';
-         
+
          setTimeout(() => {
              statusElement.style.display = 'none';
          }, 1500);
-         
+
      } else {
          statusElement.textContent = 'Initializing tracking...';
          statusElement.classList.remove('tracking-active');
@@ -498,10 +520,11 @@ window.AREngine = (function() {
    // Public API
  return {
      init: function(objectData) {
-         currentObjectData = objectData;
-         setupThreeJS();
-         return setupDeviceTracking();
-     },
+        currentObjectData = objectData;
+        setupThreeJS();
+        initializeModelLoader();
+        return setupDeviceTracking();
+    },
 
      placeObject: function() {
          create3DObject();
@@ -523,21 +546,21 @@ window.AREngine = (function() {
              scene.remove(arObject);
              arObject = null;
          }
-         
+
          if (animationId) {
              cancelAnimationFrame(animationId);
              animationId = null;
          }
-         
+
          objectPlaced = false;
          initialOrientation = null;
          objectScale = 1.0;
          objectRotation = { x: 0, y: 0, z: 0 };
          objectPosition = { x: 0, y: -1, z: -3 };
-         
+
          threeCamera.position.set(0, 0, 0);
          threeCamera.rotation.set(0, 0, 0);
-         
+
          updateTrackingStatus();
      },
 

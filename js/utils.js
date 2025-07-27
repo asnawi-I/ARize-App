@@ -119,3 +119,59 @@ function parseURLData() {
         is3d: urlParams.get('is3d') === 'true' || urlParams.get('type') === '3d_model'
     };
 }
+
+
+function showLoadingIndicator() {
+    hideLoadingIndicator();
+    
+    const indicator = document.createElement('div');
+    indicator.id = 'modelLoadingIndicator';
+    indicator.style.cssText = `
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        background: rgba(0, 0, 0, 0.85);
+        backdrop-filter: blur(15px);
+        color: white;
+        padding: 20px;
+        border-radius: 15px;
+        z-index: 250;
+        text-align: center;
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        min-width: 200px;
+    `;
+    
+    indicator.innerHTML = `
+        <div style="margin-bottom: 15px; font-weight: 600;">Loading 3D Model</div>
+        <div style="width: 100%; height: 4px; background: rgba(255,255,255,0.2); border-radius: 2px; overflow: hidden;">
+            <div id="loadingProgressBar" style="width: 0%; height: 100%; background: #007AFF; transition: width 0.3s ease; border-radius: 2px;"></div>
+        </div>
+        <div id="loadingPercentage" style="margin-top: 10px; font-size: 12px; opacity: 0.8;">0%</div>
+    `;
+    
+    document.body.appendChild(indicator);
+}
+
+function updateLoadingProgress(percentage) {
+    const progressBar = document.getElementById('loadingProgressBar');
+    const percentageText = document.getElementById('loadingPercentage');
+    
+    if (progressBar) {
+        progressBar.style.width = percentage + '%';
+    }
+    if (percentageText) {
+        percentageText.textContent = Math.round(percentage) + '%';
+    }
+}
+
+function hideLoadingIndicator() {
+    const indicator = document.getElementById('modelLoadingIndicator');
+    if (indicator) {
+        indicator.remove();
+    }
+}
+
+window.showLoadingIndicator = showLoadingIndicator;
+window.updateLoadingProgress = updateLoadingProgress;
+window.hideLoadingIndicator = hideLoadingIndicator;
