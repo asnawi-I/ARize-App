@@ -10,7 +10,7 @@ window.AREngine = (function() {
         '3d_model': [
         'models/Duck.glb',  
         'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/Duck/glTF-Binary/Duck.glb'
-        ]
+        ],
         'bottle': [
             'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/WaterBottle/glTF-Binary/WaterBottle.glb'
         ]
