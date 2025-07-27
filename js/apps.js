@@ -50,10 +50,16 @@ async function initApp() {
 
     } catch (error) {
         console.error('Failed to initialize AR:', error);
-        showError('Failed to initialize AR experience');
+        console.error('Error stack:', error.stack);
+        console.error('Error name:', error.name);
+        console.error('Full error object:', JSON.stringify(error));
 
-        checkDependencies();
-        console.log('All dependencies loaded');
+        // Hide loading before showing error
+        if (loading) {
+            loading.style.display = 'none';
+        }
+
+        showError(`AR Error: ${error.message || 'Unknown error'}`);
     }
 }
 
