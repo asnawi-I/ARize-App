@@ -76,15 +76,12 @@ window.AREngine = (function() {
         
         console.log('Three.js setup complete');
     }
-    
+
 
     function initializeModelLoader() {
-        if (window.GLTFLoader) {
-            modelLoader = new window.GLTFLoader();
-            console.log('GLTF Loader initialized');
-        } else {
-            console.warn('GLTF Loader not available, using fallback geometry');
-        }
+    // For now, we'll skip 3D model loading and use fallback geometry
+        console.log('Using fallback geometry (GLTFLoader temporarily disabled)');
+        modelLoader = null;
     }
 
     async function setupDeviceTracking() {
@@ -147,7 +144,7 @@ window.AREngine = (function() {
     function setupTouchFallback() {
         console.log('Setting up touch-based camera control');
         let isInteracting = false;
-        let lastTouchFallback = { x: 0, y: 0 };
+        let lastTouchFallback = { x: 0, y: 0 }; 
         let cameraRotation = { x: 0, y: 0 };
 
         const canvas = document.getElementById('ar-canvas');
@@ -235,8 +232,8 @@ window.AREngine = (function() {
 
      if (e.touches.length === 1 && !isScaling) {
          const touch = e.touches[0];
-         const deltaX = touch.clientX - lastTouch.x;
-         const deltaY = touch.clientY - lastTouch.y;
+         const deltaX = touch.clientX - lastTouchFallback.x;
+         const deltaY = touch.clientY - lastTouchFallback.y;
 
          const moveSensitivity = 0.01;
          objectPosition.x += deltaX * moveSensitivity;
@@ -309,8 +306,8 @@ window.AREngine = (function() {
              }
          }
 
-         lastTouch.centerX = centerX;
-         lastTouch.centerY = centerY;
+         lastTouchFallback.x = touch.clientX;
+         lastTouchFallback.y = touch.clientY;
      }
  }
 
