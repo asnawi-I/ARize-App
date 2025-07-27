@@ -14,6 +14,9 @@ window.AREngine = (function() {
         'bottle': [
             'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/WaterBottle/glTF-Binary/WaterBottle.glb'
         ]
+        'brain_stem': ['models/BrainStem.glb'],
+        'helmet': ['models/DamagedHelmet.glb'], 
+        'mosquito': ['models/MosquitoInAmber.glb']
     };
     // Private variables
     let scene, renderer, arObject, threeCamera;
@@ -104,7 +107,7 @@ window.AREngine = (function() {
     async function setupDeviceTracking() {
         try {
             console.log('Setting up device tracking...');
-            
+
             if (typeof DeviceOrientationEvent.requestPermission === 'function') {
                 const permission = await DeviceOrientationEvent.requestPermission();
                 if (permission !== 'granted') {
@@ -113,7 +116,7 @@ window.AREngine = (function() {
             }
 
             window.addEventListener('deviceorientation', handleOrientation, true);
-            
+
             setupTouchControls();
 
             setTimeout(() => {
