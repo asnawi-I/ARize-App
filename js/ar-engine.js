@@ -221,6 +221,79 @@ window.AREngine = (function() {
     }
 }
 
+
+function detectVisualFeatures() {
+    // Simple edge detection for visual anchoring
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    const video = document.getElementById('camera');
+    
+    if (!video.videoWidth || !video.videoHeight) return null;
+    
+    canvas.width = 160; // Low res for performance
+    canvas.height = 120;
+    
+    try {
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        
+        // Simple corner detection
+        const corners = findCorners(imageData);
+        
+        if (corners.length > 3) {
+            return {
+                corners: corners,
+                confidence: Math.min(100, corners.length * 10),
+                timestamp: Date.now()
+            };
+        }
+        
+    } catch (error) {
+        // Canvas access might fail on some devices
+        return null;
+    }
+    
+    return null;
+}
+
+function findCorners(imageData) {
+    const corners = [];
+    const data = imageData.data;
+    const width = imageData.width;
+    const height = imageData.height;
+    
+    // Simple corner detection algorithm
+    for (let y = 10; y < height - 10; y += 10) {
+        for (let x = 10; x < width - 10; x += 10) {
+            const intensity = getPixelIntensity(data, x, y, width);
+            const surrounding = [
+                getPixelIntensity(data, x-5, y-5, width),
+                getPixelIntensity(data, x+5, y-5, width),
+                getPixelIntensity(data, x-5, y+5, width),
+                getPixelIntensity(data, x+5, y+5, width)
+            ];
+            
+            const variance = calculateVariance([intensity, ...surrounding]);
+            
+            if (variance > 30) { // Corner threshold
+                corners.push({ x, y, strength: variance });
+            }
+        }
+    }
+    
+    return corners.sort((a, b) => b.strength - a.strength).slice(0, 10);
+}
+
+function getPixelIntensity(data, x, y, width) {
+    const index = (y * width + x) * 4;
+    return (data[index] + data[index + 1] + data[index + 2]) / 3;
+}
+
+function calculateVariance(values) {
+    const mean = values.reduce((a, b) => a + b) / values.length;
+    return values.reduce((sum, val) => sum + Math.pow(val - mean, 2), 0) / values.length;
+}
+
 function setupTouchFallback() {
     console.log('Setting up touch-based camera control');
     let isInteracting = false;
