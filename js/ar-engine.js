@@ -163,7 +163,6 @@ window.AREngine = (function() {
             e.preventDefault();
             
             const touch = e.touches[0];
-            const deltaX = touch.client
             const deltaX = touch.clientX - lastTouchFallback.x;
             const deltaY = touch.clientY - lastTouchFallback.y;
 
@@ -226,90 +225,90 @@ window.AREngine = (function() {
      }
  }
 
- function handleTouchMove(e) {
-     if (!objectPlaced || !isDragging) return;
-     e.preventDefault();
-
-     if (e.touches.length === 1 && !isScaling) {
-         const touch = e.touches[0];
-         const deltaX = touch.clientX - lastTouchFallback.x;
-         const deltaY = touch.clientY - lastTouchFallback.y;
-
-         const moveSensitivity = 0.01;
-         objectPosition.x += deltaX * moveSensitivity;
-         objectPosition.y -= deltaY * moveSensitivity;
-
-         if (arObject) {
-             arObject.position.set(objectPosition.x, objectPosition.y, objectPosition.z);
-         }
-
-         lastTouch.x = touch.clientX;
-         lastTouch.y = touch.clientY;
-
-     } else if (e.touches.length === 2) {
-         const touch1 = e.touches[0];
-         const touch2 = e.touches[1];
-
-         const currentDistance = Math.hypot(
-             touch2.clientX - touch1.clientX,
-             touch2.clientY - touch1.clientY
-             );
-
-         const centerX = (touch1.clientX + touch2.clientX) / 2;
-         const centerY = (touch1.clientY + touch2.clientY) / 2;
-
-         if (isScaling) {
-             const scaleChange = currentDistance / lastTouch.scale;
-             objectScale = Math.max(0.5, Math.min(3.0, objectScale * scaleChange));
-
-             if (arObject) {
-                 arObject.scale.setScalar(objectScale);
-             }
-
-             document.getElementById('scaleSlider').value = objectScale;
-             document.getElementById('scaleValue').textContent = Math.round(objectScale * 100) + '%';
-
-             showScaleNotification(Math.round(objectScale * 100) + '%');
-
-             lastTouch.scale = currentDistance;
-         }
-
-         if (lastTouch.centerX !== undefined && lastTouch.centerY !== undefined) {
-             const centerDeltaX = centerX - lastTouch.centerX;
-             const centerDeltaY = centerY - lastTouch.centerY;
-
-             const rotationSensitivity = 0.02;
-
-             objectRotation.y += centerDeltaX * rotationSensitivity;
-             objectRotation.x += centerDeltaY * rotationSensitivity;
-
-             const currentAngle = Math.atan2(
-                 touch2.clientY - touch1.clientY,
-                 touch2.clientX - touch1.clientX
-                 );
-
-             if (lastTouch.angle !== undefined) {
-                 let angleDiff = currentAngle - lastTouch.angle;
-
-                 if (angleDiff > Math.PI) angleDiff -= 2 * Math.PI;
-                 if (angleDiff < -Math.PI) angleDiff += 2 * Math.PI;
-
-                 objectRotation.z += angleDiff * 0.8;
-             }
-
-             lastTouch.angle = currentAngle;
-
-             if (arObject) {
-                 arObject.rotation.x = objectRotation.x;
-                 arObject.rotation.y = objectRotation.y;
-                 arObject.rotation.z = objectRotation.z;
-             }
-         }
-
-         lastTouchFallback.x = touch.clientX;
-         lastTouchFallback.y = touch.clientY;
-     }
- }
+function handleTouchMove(e) {
+    if (!objectPlaced || !isDragging) return;
+    e.preventDefault();
+    
+    if (e.touches.length === 1 && !isScaling) {
+        const touch = e.touches[0];
+        const deltaX = touch.clientX - lastTouch.x;
+        const deltaY = touch.clientY - lastTouch.y;
+        
+        const moveSensitivity = 0.01;
+        objectPosition.x += deltaX * moveSensitivity;
+        objectPosition.y -= deltaY * moveSensitivity;
+        
+        if (arObject) {
+            arObject.position.set(objectPosition.x, objectPosition.y, objectPosition.z);
+        }
+        
+        lastTouch.x = touch.clientX;
+        lastTouch.y = touch.clientY;
+        
+    } else if (e.touches.length === 2) {
+        const touch1 = e.touches[0];
+        const touch2 = e.touches[1];
+        
+        const currentDistance = Math.hypot(
+            touch2.clientX - touch1.clientX,
+            touch2.clientY - touch1.clientY
+        );
+        
+        const centerX = (touch1.clientX + touch2.clientX) / 2;
+        const centerY = (touch1.clientY + touch2.clientY) / 2;
+        
+        if (isScaling) {
+            const scaleChange = currentDistance / lastTouch.scale;
+            objectScale = Math.max(0.5, Math.min(3.0, objectScale * scaleChange));
+            
+            if (arObject) {
+                arObject.scale.setScalar(objectScale);
+            }
+            
+            document.getElementById('scaleSlider').value = objectScale;
+            document.getElementById('scaleValue').textContent = Math.round(objectScale * 100) + '%';
+            
+            showScaleNotification(Math.round(objectScale * 100) + '%');
+            
+            lastTouch.scale = currentDistance;
+        }
+        
+        if (lastTouch.centerX !== undefined && lastTouch.centerY !== undefined) {
+            const centerDeltaX = centerX - lastTouch.centerX;
+            const centerDeltaY = centerY - lastTouch.centerY;
+            
+            const rotationSensitivity = 0.02;
+            
+            objectRotation.y += centerDeltaX * rotationSensitivity;
+            objectRotation.x += centerDeltaY * rotationSensitivity;
+            
+            const currentAngle = Math.atan2(
+                touch2.clientY - touch1.clientY,
+                touch2.clientX - touch1.clientX
+            );
+            
+            if (lastTouch.angle !== undefined) {
+                let angleDiff = currentAngle - lastTouch.angle;
+                
+                if (angleDiff > Math.PI) angleDiff -= 2 * Math.PI;
+                if (angleDiff < -Math.PI) angleDiff += 2 * Math.PI;
+                
+                objectRotation.z += angleDiff * 0.8;
+            }
+            
+            lastTouch.angle = currentAngle;
+            
+            if (arObject) {
+                arObject.rotation.x = objectRotation.x;
+                arObject.rotation.y = objectRotation.y;
+                arObject.rotation.z = objectRotation.z;
+            }
+        }
+        
+        lastTouch.centerX = centerX;
+        lastTouch.centerY = centerY;
+    }
+}
 
  function handleTouchEnd(e) {
      isDragging = false;
