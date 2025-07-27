@@ -17,7 +17,10 @@ window.AREngine = (function() {
 
         'brain_stem': ['models/BrainStem.glb'],
         'helmet': ['models/DamagedHelmet.glb'], 
-        'mosquito': ['models/MosquitoInAmber.glb']
+        'mosquito': ['models/MosquitoInAmber.glb'],
+
+        'photo_model': (modelId) => [`user-models/${modelId}.glb`],
+        'custom': (modelId) => [`https://your-cloud-storage.com/models/${modelId}.glb`]
     };
     // Private variables
     let scene, renderer, arObject, threeCamera;
