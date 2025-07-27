@@ -11,6 +11,33 @@
             padding: 0; 
             box-sizing: border-box; 
         }
+
+        /* Remove blue highlight/outline on all interactive elements */
+        *, *:focus, *:active, *:visited {
+            -webkit-tap-highlight-color: transparent;
+            -webkit-touch-callout: none;
+            -webkit-user-select: none;
+            -khtml-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
+            user-select: none;
+            outline: none !important;
+            border: none;
+        }
+
+        button, input[type="range"] {
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            appearance: none;
+            outline: none !important;
+            border: none !important;
+        }
+
+        button:focus, button:active, button:visited {
+            outline: none !important;
+            border: none !important;
+            box-shadow: none !important;
+        }
         
         body { 
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
@@ -559,7 +586,13 @@
         let objectRotation = { x: 0, y: 0, z: 0 };
         let manualRotationMode = true; 
         let isDragging = false;
-        let lastTouch = { x: 0, y: 0, scale: 0, angle: undefined };
+        let lastTouch = { 
+            x: 0, y: 0, 
+            scale: 0, 
+            angle: undefined, 
+            centerX: undefined, 
+            centerY: undefined 
+        };
         let isScaling = false;
 
         // Initialize app
@@ -1032,20 +1065,28 @@
             isDragging = true;
 
             if (e.touches.length === 1) {
-        // Single touch - check if touching the object for rotation/movement
+                 // Single touch - prepare for dragging
                 const touch = e.touches[0];
                 lastTouch.x = touch.clientX;
                 lastTouch.y = touch.clientY;
-                lastTouch.startTime = Date.now();
-                lastTouch.moved = false;
             } else if (e.touches.length === 2) {
-        // Two finger pinch - scale object
-                isScaling = true;
+                // Two fingers - prepare for scaling and multi-axis rotation
                 const touch1 = e.touches[0];
                 const touch2 = e.touches[1];
+
+                // For scaling
+                isScaling = true;
                 lastTouch.scale = Math.hypot(
                     touch2.clientX - touch1.clientX,
                     touch2.clientY - touch1.clientY
+                    );
+
+                // For multi-axis rotation
+                lastTouch.centerX = (touch1.clientX + touch2.clientX) / 2;
+                lastTouch.centerY = (touch1.clientY + touch2.clientY) / 2;
+                lastTouch.angle = Math.atan2(
+                    touch2.clientY - touch1.clientY,
+                    touch2.clientX - touch1.clientX
                     );
             }
         }
@@ -1077,16 +1118,14 @@ function handleTouchMove(e) {
         const touch1 = e.touches[0];
         const touch2 = e.touches[1];
         
-        // Calculate current distance and angle
+        // Calculate current distance and center point
         const currentDistance = Math.hypot(
             touch2.clientX - touch1.clientX,
             touch2.clientY - touch1.clientY
         );
         
-        const currentAngle = Math.atan2(
-            touch2.clientY - touch1.clientY,
-            touch2.clientX - touch1.clientX
-        );
+        const centerX = (touch1.clientX + touch2.clientX) / 2;
+        const centerY = (touch1.clientY + touch2.clientY) / 2;
         
         if (isScaling) {
             // Continue scaling
@@ -1107,32 +1146,63 @@ function handleTouchMove(e) {
             lastTouch.scale = currentDistance;
         }
         
-        // Check for twist rotation
-        if (lastTouch.angle !== undefined) {
-            let angleDiff = currentAngle - lastTouch.angle;
+        // Multi-axis rotation based on finger movement
+        if (lastTouch.centerX !== undefined && lastTouch.centerY !== undefined) {
+            const centerDeltaX = centerX - lastTouch.centerX;
+            const centerDeltaY = centerY - lastTouch.centerY;
             
-            // Normalize angle difference to avoid jumps
-            if (angleDiff > Math.PI) angleDiff -= 2 * Math.PI;
-            if (angleDiff < -Math.PI) angleDiff += 2 * Math.PI;
+            // Calculate rotation deltas for multiple axes
+            const rotationSensitivity = 0.02;
             
-            // Apply twist rotation
-            const rotationSensitivity = 1.5;
-            objectRotation.y += angleDiff * rotationSensitivity;
+            // Y-axis rotation (horizontal movement)
+            objectRotation.y += centerDeltaX * rotationSensitivity;
             
+            // X-axis rotation (vertical movement)
+            objectRotation.x += centerDeltaY * rotationSensitivity;
+            
+            // Z-axis rotation (twist - based on angle change)
+            const currentAngle = Math.atan2(
+                touch2.clientY - touch1.clientY,
+                touch2.clientX - touch1.clientX
+            );
+            
+            if (lastTouch.angle !== undefined) {
+                let angleDiff = currentAngle - lastTouch.angle;
+                
+                // Normalize angle difference
+                if (angleDiff > Math.PI) angleDiff -= 2 * Math.PI;
+                if (angleDiff < -Math.PI) angleDiff += 2 * Math.PI;
+                
+                // Z-axis rotation (twist)
+                objectRotation.z += angleDiff * 0.8;
+            }
+            
+            lastTouch.angle = currentAngle;
+            
+            // Apply all rotations to the object
             if (arObject) {
+                arObject.rotation.x = objectRotation.x;
                 arObject.rotation.y = objectRotation.y;
+                arObject.rotation.z = objectRotation.z;
             }
         }
         
-        lastTouch.angle = currentAngle;
+        // Store current center position
+        lastTouch.centerX = centerX;
+        lastTouch.centerY = centerY;
     }
 }
+
+
 
 function handleTouchEnd(e) {
     isDragging = false;
     isScaling = false;
     lastTouch.angle = undefined;
+    lastTouch.centerX = undefined;
+    lastTouch.centerY = undefined;
     
+    // Remove scale notification if it exists
     setTimeout(() => {
         const notification = document.getElementById('scaleNotification');
         if (notification) notification.remove();
