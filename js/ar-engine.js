@@ -43,13 +43,14 @@ window.AREngine = (function() {
     };
     let isScaling = false;
 
-    // Current object data
+// Current object data
     let currentObjectData = {};
+
+// tracking variables  
     let worldAnchor = null;
     let trackingQuality = 0;
     let motionHistory = [];
     let stabilityCounter = 0;
-
     let positionPredictor = { x: 0, y: 0, z: 0 };
     let lastUpdateTime = 0;
 
