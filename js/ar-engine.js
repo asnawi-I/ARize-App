@@ -101,6 +101,38 @@ window.AREngine = (function() {
         }
     }
 
+    async function setupDeviceTracking() {
+    try {
+        console.log('Setting up device tracking...');
+        
+        if (typeof DeviceOrientationEvent.requestPermission === 'function') {
+            const permission = await DeviceOrientationEvent.requestPermission();
+            if (permission !== 'granted') {
+                throw new Error('Device orientation permission denied');
+            }
+        }
+
+        window.addEventListener('deviceorientation', handleOrientation, true);
+        
+        setupTouchControls();
+
+        setTimeout(() => {
+            if (deviceOrientation.alpha === 0 && deviceOrientation.beta === 0) {
+                console.warn('Device orientation not working, using fallback');
+                setupTouchFallback();
+            } else {
+                isTracking = true;
+                updateTrackingStatus();
+                console.log('Device tracking active');
+            }
+        }, 1000);
+
+    } catch (error) {
+        console.error('Device tracking setup failed:', error);
+        setupTouchFallback();
+    }
+}
+
     function handleOrientation(event) {
         deviceOrientation.alpha = event.alpha || 0;
         deviceOrientation.beta = event.beta || 0;
@@ -494,20 +526,12 @@ function handleTouchMove(e) {
    // Public API
  return {
      init: async function(objectData) {
-        console.log('AREngine.init called with:', objectData);
         currentObjectData = objectData;
+        setupThreeJS();
+        await initializeModelLoader();
+        return setupDeviceTracking();
+    },
 
-        try {
-            setupThreeJS();
-            await initializeModelLoader();
-        await setupDeviceTracking();  
-        console.log('AREngine initialization complete');
-        return Promise.resolve();
-    } catch (error) {
-        console.error('AREngine initialization failed:', error);
-        throw error;
-    }
-},
      placeObject: function() {
          create3DObject();
          objectPlaced = true;
