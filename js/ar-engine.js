@@ -13,7 +13,8 @@ window.AREngine = (function() {
         ],
         'bottle': [
             'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/WaterBottle/glTF-Binary/WaterBottle.glb'
-        ]
+        ],
+        
         'brain_stem': ['models/BrainStem.glb'],
         'helmet': ['models/DamagedHelmet.glb'], 
         'mosquito': ['models/MosquitoInAmber.glb']
@@ -183,62 +184,62 @@ window.AREngine = (function() {
             cameraRotation.x += deltaY * 0.01;
 
             if (objectPlaced) {
-               updateCameraPosition(cameraRotation);
-           }
+             updateCameraPosition(cameraRotation);
+         }
 
-           lastTouchFallback.x = touch.clientX;
-           lastTouchFallback.y = touch.clientY;
-       });
+         lastTouchFallback.x = touch.clientX;
+         lastTouchFallback.y = touch.clientY;
+     });
 
         canvas.addEventListener('touchend', () => {
-           isInteracting = false;
-       });
+         isInteracting = false;
+     });
 
         isTracking = true;
         updateTrackingStatus();
     }
 
     function setupTouchControls() {
-       const canvas = document.getElementById('ar-canvas');
+     const canvas = document.getElementById('ar-canvas');
 
-       canvas.addEventListener('touchstart', handleTouchStart, { passive: false });
-       canvas.addEventListener('touchmove', handleTouchMove, { passive: false });
-       canvas.addEventListener('touchend', handleTouchEnd, { passive: false });
+     canvas.addEventListener('touchstart', handleTouchStart, { passive: false });
+     canvas.addEventListener('touchmove', handleTouchMove, { passive: false });
+     canvas.addEventListener('touchend', handleTouchEnd, { passive: false });
 
-       canvas.addEventListener('mousedown', handleMouseStart);
-       canvas.addEventListener('mousemove', handleMouseMove);
-       canvas.addEventListener('mouseup', handleMouseEnd);
-   }
+     canvas.addEventListener('mousedown', handleMouseStart);
+     canvas.addEventListener('mousemove', handleMouseMove);
+     canvas.addEventListener('mouseup', handleMouseEnd);
+ }
 
-   function handleTouchStart(e) {
-       if (!objectPlaced) return;
-       e.preventDefault();
-       isDragging = true;
+ function handleTouchStart(e) {
+     if (!objectPlaced) return;
+     e.preventDefault();
+     isDragging = true;
 
-       if (e.touches.length === 1) {
-           const touch = e.touches[0];
-           lastTouch.x = touch.clientX;
-           lastTouch.y = touch.clientY;
-       } else if (e.touches.length === 2) {
-           const touch1 = e.touches[0];
-           const touch2 = e.touches[1];
+     if (e.touches.length === 1) {
+         const touch = e.touches[0];
+         lastTouch.x = touch.clientX;
+         lastTouch.y = touch.clientY;
+     } else if (e.touches.length === 2) {
+         const touch1 = e.touches[0];
+         const touch2 = e.touches[1];
 
-           isScaling = true;
-           lastTouch.scale = Math.hypot(
-               touch2.clientX - touch1.clientX,
-               touch2.clientY - touch1.clientY
-               );
+         isScaling = true;
+         lastTouch.scale = Math.hypot(
+             touch2.clientX - touch1.clientX,
+             touch2.clientY - touch1.clientY
+             );
 
-           lastTouch.centerX = (touch1.clientX + touch2.clientX) / 2;
-           lastTouch.centerY = (touch1.clientY + touch2.clientY) / 2;
-           lastTouch.angle = Math.atan2(
-               touch2.clientY - touch1.clientY,
-               touch2.clientX - touch1.clientX
-               );
-       }
-   }
+         lastTouch.centerX = (touch1.clientX + touch2.clientX) / 2;
+         lastTouch.centerY = (touch1.clientY + touch2.clientY) / 2;
+         lastTouch.angle = Math.atan2(
+             touch2.clientY - touch1.clientY,
+             touch2.clientX - touch1.clientX
+             );
+     }
+ }
 
-   function handleTouchMove(e) {
+ function handleTouchMove(e) {
     if (!objectPlaced || !isDragging) return;
     e.preventDefault();
     
@@ -324,45 +325,45 @@ window.AREngine = (function() {
 }
 
 function handleTouchEnd(e) {
-   isDragging = false;
-   isScaling = false;
-   lastTouch.angle = undefined;
-   lastTouch.centerX = undefined;
-   lastTouch.centerY = undefined;
+ isDragging = false;
+ isScaling = false;
+ lastTouch.angle = undefined;
+ lastTouch.centerX = undefined;
+ lastTouch.centerY = undefined;
 
-   setTimeout(() => {
-       const notification = document.getElementById('scaleNotification');
-       if (notification) notification.remove();
-   }, 300);
+ setTimeout(() => {
+     const notification = document.getElementById('scaleNotification');
+     if (notification) notification.remove();
+ }, 300);
 }
 
 function handleMouseStart(e) {
-   if (!objectPlaced) return;
-   isDragging = true;
-   lastTouch.x = e.clientX;
-   lastTouch.y = e.clientY;
+ if (!objectPlaced) return;
+ isDragging = true;
+ lastTouch.x = e.clientX;
+ lastTouch.y = e.clientY;
 }
 
 function handleMouseMove(e) {
-   if (!objectPlaced || !isDragging) return;
+ if (!objectPlaced || !isDragging) return;
 
-   const deltaX = e.clientX - lastTouch.x;
-   const deltaY = e.clientY - lastTouch.y;
+ const deltaX = e.clientX - lastTouch.x;
+ const deltaY = e.clientY - lastTouch.y;
 
-   const moveSensitivity = 0.01;
-   objectPosition.x += deltaX * moveSensitivity;
-   objectPosition.y -= deltaY * moveSensitivity;
+ const moveSensitivity = 0.01;
+ objectPosition.x += deltaX * moveSensitivity;
+ objectPosition.y -= deltaY * moveSensitivity;
 
-   if (arObject) {
-       arObject.position.set(objectPosition.x, objectPosition.y, objectPosition.z);
-   }
+ if (arObject) {
+     arObject.position.set(objectPosition.x, objectPosition.y, objectPosition.z);
+ }
 
-   lastTouch.x = e.clientX;
-   lastTouch.y = e.clientY;
+ lastTouch.x = e.clientX;
+ lastTouch.y = e.clientY;
 }
 
 function handleMouseEnd(e) {
-   isDragging = false;
+ isDragging = false;
 }
 
 async function create3DObject() {
@@ -500,97 +501,97 @@ function createFallbackGeometry() {
 
 
 function startRenderLoop() {
-   function animate() {
-       if (!objectPlaced) return;
+ function animate() {
+     if (!objectPlaced) return;
 
-       animationId = requestAnimationFrame(animate);
+     animationId = requestAnimationFrame(animate);
 
-       if (!manualRotationMode) {
-           updateCameraFromOrientation();
-       }
+     if (!manualRotationMode) {
+         updateCameraFromOrientation();
+     }
 
-       if (arObject && arObject.userData && arObject.userData.rotationSpeed && !manualRotationMode) {
-           arObject.rotation.y += arObject.userData.rotationSpeed;
-       }
+     if (arObject && arObject.userData && arObject.userData.rotationSpeed && !manualRotationMode) {
+         arObject.rotation.y += arObject.userData.rotationSpeed;
+     }
 
-       renderer.render(scene, threeCamera);
-   }
-   animate();
+     renderer.render(scene, threeCamera);
+ }
+ animate();
 }
 
 function updateCameraFromOrientation() {
-   if (!initialOrientation || !isTracking) return;
+ if (!initialOrientation || !isTracking) return;
 
-   const alphaDiff = (deviceOrientation.alpha - initialOrientation.alpha) * Math.PI / 180;
-   const betaDiff = (deviceOrientation.beta - initialOrientation.beta) * Math.PI / 180;
-   const gammaDiff = (deviceOrientation.gamma - initialOrientation.gamma) * Math.PI / 180;
+ const alphaDiff = (deviceOrientation.alpha - initialOrientation.alpha) * Math.PI / 180;
+ const betaDiff = (deviceOrientation.beta - initialOrientation.beta) * Math.PI / 180;
+ const gammaDiff = (deviceOrientation.gamma - initialOrientation.gamma) * Math.PI / 180;
 
-   const radius = 4;
+ const radius = 4;
 
-   const x = objectPosition.x + radius * Math.sin(alphaDiff) * Math.cos(betaDiff);
-   const z = objectPosition.z + radius * Math.cos(alphaDiff) * Math.cos(betaDiff);
-   const y = objectPosition.y + radius * Math.sin(betaDiff);
+ const x = objectPosition.x + radius * Math.sin(alphaDiff) * Math.cos(betaDiff);
+ const z = objectPosition.z + radius * Math.cos(alphaDiff) * Math.cos(betaDiff);
+ const y = objectPosition.y + radius * Math.sin(betaDiff);
 
-   threeCamera.position.set(x, y, z);
-   threeCamera.lookAt(objectPosition.x, objectPosition.y, objectPosition.z);
+ threeCamera.position.set(x, y, z);
+ threeCamera.lookAt(objectPosition.x, objectPosition.y, objectPosition.z);
 
-   threeCamera.rotation.z = gammaDiff * 0.5;
+ threeCamera.rotation.z = gammaDiff * 0.5;
 }
 
 function updateCameraPosition(rotation) {
-   if (!objectPlaced) return;
+ if (!objectPlaced) return;
 
-   const radius = 4;
-   const x = objectPosition.x + radius * Math.sin(rotation.y) * Math.cos(rotation.x);
-   const z = objectPosition.z + radius * Math.cos(rotation.y) * Math.cos(rotation.x);
-   const y = objectPosition.y + radius * Math.sin(rotation.x);
+ const radius = 4;
+ const x = objectPosition.x + radius * Math.sin(rotation.y) * Math.cos(rotation.x);
+ const z = objectPosition.z + radius * Math.cos(rotation.y) * Math.cos(rotation.x);
+ const y = objectPosition.y + radius * Math.sin(rotation.x);
 
-   threeCamera.position.set(x, y, z);
-   threeCamera.lookAt(objectPosition.x, objectPosition.y, objectPosition.z);
+ threeCamera.position.set(x, y, z);
+ threeCamera.lookAt(objectPosition.x, objectPosition.y, objectPosition.z);
 }
 
 function updateTrackingStatus() {
-   const statusElement = document.getElementById('trackingStatus');
-   const trackingValue = document.getElementById('trackingValue');
+ const statusElement = document.getElementById('trackingStatus');
+ const trackingValue = document.getElementById('trackingValue');
 
-   if (isTracking && objectPlaced) {
-       statusElement.textContent = 'Spatial tracking active';
-       statusElement.classList.add('tracking-active');
-       statusElement.style.display = 'block';
-       trackingValue.textContent = 'Active';
-       trackingValue.style.color = '#4CAF50';
+ if (isTracking && objectPlaced) {
+     statusElement.textContent = 'Spatial tracking active';
+     statusElement.classList.add('tracking-active');
+     statusElement.style.display = 'block';
+     trackingValue.textContent = 'Active';
+     trackingValue.style.color = '#4CAF50';
 
-       setTimeout(() => {
-           statusElement.classList.add('fade-out');
-           setTimeout(() => {
-               statusElement.style.display = 'none';
-               statusElement.classList.remove('fade-out');
-           }, 300);
-       }, 2000);
+     setTimeout(() => {
+         statusElement.classList.add('fade-out');
+         setTimeout(() => {
+             statusElement.style.display = 'none';
+             statusElement.classList.remove('fade-out');
+         }, 300);
+     }, 2000);
 
-   } else if (isTracking) {
-       statusElement.textContent = 'Ready to place object';
-       statusElement.classList.remove('tracking-active');
-       statusElement.style.display = 'block';
-       trackingValue.textContent = 'Ready';
-       trackingValue.style.color = '#FFD700';
+ } else if (isTracking) {
+     statusElement.textContent = 'Ready to place object';
+     statusElement.classList.remove('tracking-active');
+     statusElement.style.display = 'block';
+     trackingValue.textContent = 'Ready';
+     trackingValue.style.color = '#FFD700';
 
-       setTimeout(() => {
-           statusElement.style.display = 'none';
-       }, 1500);
+     setTimeout(() => {
+         statusElement.style.display = 'none';
+     }, 1500);
 
-   } else {
-       statusElement.textContent = 'Initializing tracking...';
-       statusElement.classList.remove('tracking-active');
-       statusElement.style.display = 'block';
-       trackingValue.textContent = 'Off';
-       trackingValue.style.color = '#F44336';
-   }
+ } else {
+     statusElement.textContent = 'Initializing tracking...';
+     statusElement.classList.remove('tracking-active');
+     statusElement.style.display = 'block';
+     trackingValue.textContent = 'Off';
+     trackingValue.style.color = '#F44336';
+ }
 }
 
    // Public API
 return {
-   init: async function(objectData) {
+ init: async function(objectData) {
     currentObjectData = objectData;
     setupThreeJS();
     await initializeModelLoader();
@@ -598,49 +599,49 @@ return {
 },
 
 placeObject: async function() {
-   create3DObject();
-   objectPlaced = true;
-   initialOrientation = { ...deviceOrientation };
-   startRenderLoop();
-   updateTrackingStatus();
+ create3DObject();
+ objectPlaced = true;
+ initialOrientation = { ...deviceOrientation };
+ startRenderLoop();
+ updateTrackingStatus();
 },
 
 updateScale: function(scale) {
-   objectScale = scale;
-   if (arObject) {
-       arObject.scale.setScalar(objectScale);
-   }
+ objectScale = scale;
+ if (arObject) {
+     arObject.scale.setScalar(objectScale);
+ }
 },
 
 resetObject: function() {
-   if (arObject) {
-       scene.remove(arObject);
-       arObject = null;
-   }
+ if (arObject) {
+     scene.remove(arObject);
+     arObject = null;
+ }
 
-   if (animationId) {
-       cancelAnimationFrame(animationId);
-       animationId = null;
-   }
+ if (animationId) {
+     cancelAnimationFrame(animationId);
+     animationId = null;
+ }
 
-   objectPlaced = false;
-   initialOrientation = null;
-   objectScale = 1.0;
-   objectRotation = { x: 0, y: 0, z: 0 };
-   objectPosition = { x: 0, y: -1, z: -3 };
+ objectPlaced = false;
+ initialOrientation = null;
+ objectScale = 1.0;
+ objectRotation = { x: 0, y: 0, z: 0 };
+ objectPosition = { x: 0, y: -1, z: -3 };
 
-   threeCamera.position.set(0, 0, 0);
-   threeCamera.rotation.set(0, 0, 0);
+ threeCamera.position.set(0, 0, 0);
+ threeCamera.rotation.set(0, 0, 0);
 
-   updateTrackingStatus();
+ updateTrackingStatus();
 },
 
 handleResize: function() {
-   if (threeCamera && renderer) {
-       threeCamera.aspect = window.innerWidth / window.innerHeight;
-       threeCamera.updateProjectionMatrix();
-       renderer.setSize(window.innerWidth, window.innerHeight);
-   }
+ if (threeCamera && renderer) {
+     threeCamera.aspect = window.innerWidth / window.innerHeight;
+     threeCamera.updateProjectionMatrix();
+     renderer.setSize(window.innerWidth, window.innerHeight);
+ }
 }
 };
 })();
