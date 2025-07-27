@@ -122,7 +122,9 @@ function showCameraError() {
 
 // Event listeners
 window.addEventListener('resize', () => {
-    window.AREngine.handleResize();
+    if (window.AREngine && window.AREngine.handleResize) {
+        window.AREngine.handleResize();
+    }
 });
 
 document.addEventListener('visibilitychange', () => {

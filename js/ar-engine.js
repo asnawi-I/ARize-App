@@ -50,12 +50,6 @@ window.AREngine = (function() {
     let motionHistory = [];
     let stabilityCounter = 0;
 
-    // Enhanced tracking variables
-    let worldAnchor = null;
-    let trackingQuality = 0;
-    let motionHistory = [];
-    let stabilityCounter = 0;
-
     let positionPredictor = { x: 0, y: 0, z: 0 };
     let lastUpdateTime = 0;
 
@@ -233,7 +227,7 @@ function setupTouchFallback() {
     let cameraRotation = { x: 0, y: 0 };
 
     const canvas = document.getElementById('ar-canvas');
-    
+
     canvas.addEventListener('touchstart', (e) => {
         if (objectPlaced) return;
         e.preventDefault();
@@ -246,7 +240,7 @@ function setupTouchFallback() {
     canvas.addEventListener('touchmove', (e) => {
         if (objectPlaced || !isInteracting) return;
         e.preventDefault();
-        
+
         const touch = e.touches[0];
         const deltaX = touch.clientX - lastTouchFallback.x;
         const deltaY = touch.clientY - lastTouchFallback.y;
