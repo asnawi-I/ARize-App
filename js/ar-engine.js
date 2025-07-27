@@ -362,77 +362,139 @@ function handleTouchMove(e) {
      isDragging = false;
  }
 
- function create3DObject() {
-     if (arObject) {
-         scene.remove(arObject);
-     }
+async function create3DObject() {
+    if (arObject) {
+        scene.remove(arObject);
+    }
 
-     let geometry, material;
+    let model = null;
+    
+    // Try to load 3D model first if available
+    if (modelLoader && (currentObjectData.is3d || currentObjectData.type === '3d_model')) {
+        console.log('Attempting to load 3D model...');
+        const modelPaths = modelLibrary[currentObjectData.type] || modelLibrary['3d_model'];
+        model = await load3DModel(modelPaths);
+    } else if (modelLoader && modelLibrary[currentObjectData.type]) {
+        console.log('Attempting to load model for type:', currentObjectData.type);
+        const modelPaths = modelLibrary[currentObjectData.type];
+        model = await load3DModel(modelPaths);
+    }
 
-     if (currentObjectData.is3d || currentObjectData.type === '3d_model') {
-         geometry = new THREE.IcosahedronGeometry(0.6, 2);
-         material = new THREE.MeshPhongMaterial({
-             color: 0xFFD700,
-             shininess: 100,
-             transparent: true,
-             opacity: 0.9
-         });
+    // If model loading failed, create fallback geometry
+    if (!model) {
+        console.log('Creating fallback geometry for:', currentObjectData.type);
+        model = createFallbackGeometry();
+    }
 
-         const wireframeGeometry = new THREE.IcosahedronGeometry(0.62, 2);
-         const wireframeMaterial = new THREE.MeshBasicMaterial({
-             color: 0xFFD700,
-             wireframe: true,
-             transparent: true,
-             opacity: 0.4
-         });
+    arObject = model;
+    arObject.position.set(objectPosition.x, objectPosition.y, objectPosition.z);
+    arObject.scale.setScalar(objectScale);
 
-         arObject = new THREE.Group();
-         const mainMesh = new THREE.Mesh(geometry, material);
-         const wireframe = new THREE.Mesh(wireframeGeometry, wireframeMaterial);
+    if (manualRotationMode) {
+        arObject.rotation.x = objectRotation.x;
+        arObject.rotation.y = objectRotation.y;
+        arObject.rotation.z = objectRotation.z;
+    }
 
-         mainMesh.castShadow = true;
-         mainMesh.receiveShadow = true;
+    scene.add(arObject);
+    console.log('3D object created and added to scene');
+}
 
-         arObject.add(mainMesh);
-         arObject.add(wireframe);
-         arObject.userData = { rotationSpeed: 0.005 };
 
-     } else {
-         switch (currentObjectData.type) {
-         case 'bottle':
-             geometry = new THREE.CylinderGeometry(0.25, 0.35, 1.2, 8);
-             material = new THREE.MeshPhongMaterial({ color: 0x2196F3 });
-             break;
-         case 'box':
-             geometry = new THREE.BoxGeometry(0.8, 0.8, 0.8);
-             material = new THREE.MeshPhongMaterial({ color: 0xF44336 });
-             break;
-         case 'ball':
-             geometry = new THREE.SphereGeometry(0.4, 16, 16);
-             material = new THREE.MeshPhongMaterial({ color: 0x4CAF50 });
-             break;
-         default:
-             geometry = new THREE.BoxGeometry(0.6, 0.6, 0.6);
-             material = new THREE.MeshPhongMaterial({ color: 0x9C27B0 });
-         }
+async function load3DModel(modelPaths) {
+    if (!modelLoader || !Array.isArray(modelPaths)) {
+        return null;
+    }
 
-         arObject = new THREE.Mesh(geometry, material);
-         arObject.castShadow = true;
-         arObject.receiveShadow = true;
-     }
+    for (let modelPath of modelPaths) {
+        try {
+            console.log('Loading model from:', modelPath);
+            
+            const gltf = await new Promise((resolve, reject) => {
+                modelLoader.load(modelPath, resolve, undefined, reject);
+            });
 
-     arObject.position.set(objectPosition.x, objectPosition.y, objectPosition.z);
-     arObject.scale.setScalar(objectScale);
+            const model = gltf.scene;
+            
+            // Normalize model size
+            const box = new THREE.Box3().setFromObject(model);
+            const size = box.getSize(new THREE.Vector3());
+            const maxDim = Math.max(size.x, size.y, size.z);
+            const scale = 1.0 / maxDim;
+            model.scale.multiplyScalar(scale);
+            
+            console.log('Model loaded successfully!');
+            return model;
+            
+        } catch (error) {
+            console.warn('Failed to load model from:', modelPath, error);
+            continue;
+        }
+    }
+    
+    return null;
+}
 
-     if (manualRotationMode) {
-         arObject.rotation.x = objectRotation.x;
-         arObject.rotation.y = objectRotation.y;
-         arObject.rotation.z = objectRotation.z;
-     }
+function createFallbackGeometry() {
+    // Your existing fallback code here - keep it the same
+    let geometry, material;
 
-     scene.add(arObject);
-     console.log('3D object created at:', objectPosition);
- }
+    if (currentObjectData.is3d || currentObjectData.type === '3d_model') {
+        geometry = new THREE.IcosahedronGeometry(0.6, 2);
+        material = new THREE.MeshPhongMaterial({
+            color: 0xFFD700,
+            shininess: 100,
+            transparent: true,
+            opacity: 0.9
+        });
+
+        const wireframeGeometry = new THREE.IcosahedronGeometry(0.62, 2);
+        const wireframeMaterial = new THREE.MeshBasicMaterial({
+            color: 0xFFD700,
+            wireframe: true,
+            transparent: true,
+            opacity: 0.4
+        });
+
+        const group = new THREE.Group();
+        const mainMesh = new THREE.Mesh(geometry, material);
+        const wireframe = new THREE.Mesh(wireframeGeometry, wireframeMaterial);
+
+        mainMesh.castShadow = true;
+        mainMesh.receiveShadow = true;
+
+        group.add(mainMesh);
+        group.add(wireframe);
+        group.userData = { rotationSpeed: 0.005 };
+
+        return group;
+    } else {
+        // Regular geometric shapes
+        switch (currentObjectData.type) {
+            case 'bottle':
+                geometry = new THREE.CylinderGeometry(0.25, 0.35, 1.2, 8);
+                material = new THREE.MeshPhongMaterial({ color: 0x2196F3 });
+                break;
+            case 'box':
+                geometry = new THREE.BoxGeometry(0.8, 0.8, 0.8);
+                material = new THREE.MeshPhongMaterial({ color: 0xF44336 });
+                break;
+            case 'ball':
+                geometry = new THREE.SphereGeometry(0.4, 16, 16);
+                material = new THREE.MeshPhongMaterial({ color: 0x4CAF50 });
+                break;
+            default:
+                geometry = new THREE.BoxGeometry(0.6, 0.6, 0.6);
+                material = new THREE.MeshPhongMaterial({ color: 0x9C27B0 });
+        }
+
+        const mesh = new THREE.Mesh(geometry, material);
+        mesh.castShadow = true;
+        mesh.receiveShadow = true;
+        return mesh;
+    }
+}
+
 
  function startRenderLoop() {
      function animate() {
@@ -532,7 +594,7 @@ function handleTouchMove(e) {
         return setupDeviceTracking();
     },
 
-     placeObject: function() {
+     placeObject: async function() {
          create3DObject();
          objectPlaced = true;
          initialOrientation = { ...deviceOrientation };
