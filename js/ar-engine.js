@@ -18,6 +18,7 @@ window.AREngine = (function() {
         'brain_stem': ['models/BrainStem.glb'],
         'helmet': ['models/DamagedHelmet.glb'], 
         'mosquito': ['models/MosquitoInAmber.glb'],
+        'rose': ['models/rose.glb'],
 
         'photo_model': ['user-models/photo_model.glb'],
         'custom': (modelId) => [`https://your-cloud-storage.com/models/${modelId}.glb`]
